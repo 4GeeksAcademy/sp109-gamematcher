@@ -31,3 +31,16 @@ class Game(db.Model):
             "name": self.name,
             "description": self.description
         }
+
+# Genres
+class Genre(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    image: Mapped[str] = mapped_column(Text, nullable=True)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "image": self.image
+        }

@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game
+from api.models import db, User, Game, Genre
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 
@@ -81,3 +81,66 @@ def delete_game(game_id):
     db.session.delete(game)
     db.session.commit()
     return jsonify({"message": f"Game {game_id} deleted"}), 200
+
+
+
+# GET all genres
+@api.route('/genres', methods=['GET'])
+def get_all_genres():
+    genres = Genre.query.all()
+    return jsonify([genre.serialize() for genre in genres]), 200
+
+
+# GET one genre by ID
+@api.route('/genres/<int:genre_id>', methods=['GET'])
+def get_one_genre(genre_id):
+    genre = Genre.query.get(genre_id)
+    if not genre:
+        raise APIException("Genre not found", status_code=404)
+    return jsonify(genre.serialize()), 200
+
+
+# POST a new genre
+@api.route('/genre', methods=['POST'])
+def create_genre():
+    data = request.get_json()
+
+    if not data.get("name"):
+        raise APIException("Genre name is required", status_code=400)
+
+    new_genre = Genre(
+        name=data["name"],
+        image=data.get("image")
+    )
+
+    db.session.add(new_genre)
+    db.session.commit()
+
+    return jsonify(new_genre.serialize()), 201
+
+
+# PUT update a genre
+@api.route('/genres/<int:genre_id>', methods=['PUT'])
+def update_genre(genre_id):
+    genre = Genre.query.get(genre_id)
+    if not genre:
+        raise APIException("Genre not found", status_code=404)
+
+    data = request.get_json()
+    genre.name = data.get("name", genre.name)
+    genre.image = data.get("image", genre.image)
+
+    db.session.commit()
+    return jsonify(genre.serialize()), 200
+
+
+# DELETE a genre
+@api.route('/genre/<int:genre_id>', methods=['DELETE'])
+def delete_genre(genre_id):
+    genre = Genre.query.get(genre_id)
+    if not genre:
+        raise APIException("Genre not found", status_code=404)
+
+    db.session.delete(genre)
+    db.session.commit()
+    return jsonify({"message": f"Genre {genre_id} deleted"}), 200
