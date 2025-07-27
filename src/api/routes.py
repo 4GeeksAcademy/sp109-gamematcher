@@ -2,9 +2,11 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre
+from api.models import db, User, Game, Genre, Platform
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
+
+
 
 api = Blueprint('api', __name__)
 
@@ -16,7 +18,7 @@ CORS(api)
 def handle_hello():
 
     response_body = {
-        "message": "Hello! I'm a message that came from the backend, check the network tab on the google inspector and you will see the GET request"
+        "message": "Hello! Desde el back"
     }
 
     return jsonify(response_body), 200
@@ -144,3 +146,64 @@ def delete_genre(genre_id):
     db.session.delete(genre)
     db.session.commit()
     return jsonify({"message": f"Genre {genre_id} deleted"}), 200
+
+# GET all platforms
+@api.route('/platforms', methods=['GET'])
+def get_all_platforms():
+    platforms = Platform.query.all()
+    return jsonify([platform.serialize() for platform in platforms]), 200
+
+
+# GET one platform by ID
+@api.route('/platforms/<int:platform_id>', methods=['GET'])
+def get_one_platform(platform_id):
+    platform = Platform.query.get(platform_id)
+    if not platform:
+        raise APIException("Platform not found", status_code=404)
+    return jsonify(platform.serialize()), 200
+
+
+# POST a new platform
+@api.route('/platforms', methods=['POST'])
+def create_platform():
+    data = request.get_json()
+
+    if not data.get("name"):
+        raise APIException("Platform name is required", status_code=400)
+
+    new_platform = Platform(
+        name=data["name"],
+        price=data.get("price")
+    )
+
+    db.session.add(new_platform)
+    db.session.commit()
+
+    return jsonify(new_platform.serialize()), 201
+
+
+# PUT update a platform
+@api.route('/platforms/<int:platform_id>', methods=['PUT'])
+def update_platform(platform_id):
+    platform = Platform.query.get(platform_id)
+    if not platform:
+        raise APIException("Platform not found", status_code=404)
+
+    data = request.get_json()
+    platform.name = data.get("name", platform.name)
+    platform.price = data.get("price", platform.price)
+
+    db.session.commit()
+    return jsonify(platform.serialize()), 200
+
+
+# DELETE a platform
+@api.route('/platforms/<int:platform_id>', methods=['DELETE'])
+def delete_platform(platform_id):
+    platform = Platform.query.get(platform_id)
+    if not platform:
+        raise APIException("Platform not found", status_code=404)
+
+    db.session.delete(platform)
+    db.session.commit()
+    return jsonify({"message": f"Platform {platform_id} deleted"}), 200

@@ -44,3 +44,16 @@ class Genre(db.Model):
             "name": self.name,
             "image": self.image
         }
+
+# Platforms
+class Platform(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    price: Mapped[int] = mapped_column(nullable=True)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "price": self.price
+        }
