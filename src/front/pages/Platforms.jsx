@@ -8,7 +8,7 @@ export const Platforms = () => {
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  const loadPlatforms= async () => {
+  const loadPlatforms = async () => {
     const res = await fetch(`${backendUrl}/api/platforms`);
     const data = await res.json();
     dispatch({ type: "set_platforms", payload: data });
@@ -60,12 +60,14 @@ export const Platforms = () => {
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           required
         />
-        <textarea
+        <input
+          type="number"
           className="form-control my-2"
-          placeholder="price"
+          placeholder="Price"
           value={form.price}
           onChange={(e) => setForm({ ...form, price: e.target.value })}
-        ></textarea>
+          required
+        />
         <button className="btn btn-success" type="submit">
           {editingId ? "Actualizar Plataforma" : "Añadir Plataforma"}
         </button>
@@ -74,9 +76,13 @@ export const Platforms = () => {
       <ul className="list-group">
         {store.platforms.map((platform) => (
           <li key={platform.id} className="list-group-item d-flex gap-5 justify-content-between">
-            <div>
-              <strong>{platform.name}</strong>
-              <p className="mb-0">{platform.price}</p>
+            <div className="d-flex flex-column gap-2">
+              <div className="border rounded p-2 bg-light">
+                <strong>{platform.name}</strong>
+              </div>
+              <div className="border rounded p-2 bg-light">
+                {platform.price}
+              </div>
             </div>
             <div className="d-flex flex-column gap-2 mb-2">
               <button className="btn btn-sm btn-warning me-2 mb-2" style={{ width: "40px", height: "40px" }} onClick={() => handleEdit(platform)}><i className="fa-solid fa-pen-to-square"></i></button>
