@@ -52,9 +52,9 @@ export default function storeReducer(store, action = {}) {
       return {
         ...store,
         genres: action.payload,
+      };
 
     default:
       throw Error("Unknown action.");
   }
 }
-

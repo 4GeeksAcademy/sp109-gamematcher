@@ -72,14 +72,10 @@ export const Genres = () => {
       </form>
 
       <ul className="list-group">
-        {store.genres?.map((genre) => (
+        {store.genres.map((genre) => (
           <li key={genre.id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
             <div className="d-flex align-items-center gap-3">
-              <img
-                src={genre.image || "https://picsum.photos/200/300"}
-                alt={genre.name}
-                style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "0.5rem" }}
-              />
+              <p className="mb-0">{genre.image}</p>
               <div>
                 <strong>{genre.name}</strong>
                 <p className="mb-0 text-muted" style={{ fontSize: "0.9rem", maxWidth: "250px", wordBreak: "break-word" }}>
