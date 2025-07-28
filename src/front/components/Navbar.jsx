@@ -21,7 +21,10 @@ export const Navbar = () => {
 					</Link>
 
 					<Link to="/platforms">
-						<button className="btn btn-outline-primary">Platforms</button>
+						<button className="btn btn-outline-primary me-2">Platforms</button>
+					</Link>
+					<Link to="/users">
+						<button className="btn btn-outline-primary me-2">Users</button>
 					</Link>
 				</div>
 			</div>
