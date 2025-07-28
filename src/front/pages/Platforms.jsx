@@ -1,35 +1,90 @@
-// src/pages/Platforms.jsx
 import { useEffect, useState } from "react";
+import useGlobalReducer from "../hooks/useGlobalReducer";
 
 export const Platforms = () => {
-  const [platforms, setPlatforms] = useState([]);
+  const { store, dispatch } = useGlobalReducer();
+  const [form, setForm] = useState({ name: "", price: "" });
+  const [editingId, setEditingId] = useState(null);
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  const loadPlatforms= async () => {
+    const res = await fetch(`${backendUrl}/api/platforms`);
+    const data = await res.json();
+    dispatch({ type: "set_platforms", payload: data });
+  };
 
   useEffect(() => {
-    fetch('https://solid-giggle-4jvxvjxj7gqpc7qgg-3001.app.github.dev/api/platforms')
-      .then((res) => res.json())
-      .then((data) => setPlatforms(data))
+    loadPlatforms();
   }, []);
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const method = editingId ? "PUT" : "POST";
+    const url = editingId
+      ? `${backendUrl}/api/platforms/${editingId}`
+      : `${backendUrl}/api/platforms`;
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    if (res.ok) {
+      setForm({ name: "", price: "" });
+      setEditingId(null);
+      loadPlatforms();
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const res = await fetch(`${backendUrl}/api/platforms/${id}`, { method: "DELETE" });
+    if (res.ok) loadPlatforms();
+  };
+
+  const handleEdit = (platform) => {
+    setForm({ name: platform.name, price: platform.price });
+    setEditingId(platform.id);
+  };
+
   return (
-    <div className="p-4">
-      <table className="table-auto border-collapse w-full">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="border px-4 py-2">Name</th>
-            <th className="border px-4 py-2">Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          {platforms.map((platform) => (
-            <tr key={platform.id}>
-              <td className="border px-4 py-2">{platform.name}</td>
-              <td className="border px-4 py-2">{platform.price}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="container py-4">
+      <h2>Platforms</h2>
+      <form onSubmit={handleSubmit} className="mb-4">
+        <input
+          type="text"
+          className="form-control my-2"
+          placeholder="Name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          required
+        />
+        <textarea
+          className="form-control my-2"
+          placeholder="price"
+          value={form.price}
+          onChange={(e) => setForm({ ...form, price: e.target.value })}
+        ></textarea>
+        <button className="btn btn-success" type="submit">
+          {editingId ? "Actualizar Plataforma" : "Añadir Plataforma"}
+        </button>
+      </form>
+
+      <ul className="list-group">
+        {store.platforms.map((platform) => (
+          <li key={platform.id} className="list-group-item d-flex gap-5 justify-content-between">
+            <div>
+              <strong>{platform.name}</strong>
+              <p className="mb-0">{platform.price}</p>
+            </div>
+            <div className="d-flex flex-column gap-2 mb-2">
+              <button className="btn btn-sm btn-warning me-2 mb-2" style={{ width: "40px", height: "40px" }} onClick={() => handleEdit(platform)}><i className="fa-solid fa-pen-to-square"></i></button>
+              <button className="btn btn-sm btn-danger" style={{ width: "40px", height: "40px" }} onClick={() => handleDelete(platform.id)}><i className="fa-solid fa-trash"></i></button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
-
-
