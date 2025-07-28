@@ -17,7 +17,7 @@ export const Navbar = () => {
 					</Link>
 
 					<Link to="/genres">
-						<button className="btn btn-outline-primary">Genres</button>
+						<button className="btn btn-outline-primary me-2">Genres</button>
 					</Link>
 
 					<Link to="/platforms">

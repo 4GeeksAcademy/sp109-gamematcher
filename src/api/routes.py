@@ -103,7 +103,7 @@ def get_one_genre(genre_id):
 
 
 # POST a new genre
-@api.route('/genre', methods=['POST'])
+@api.route('/genres', methods=['POST'])
 def create_genre():
     data = request.get_json()
 
@@ -137,7 +137,7 @@ def update_genre(genre_id):
 
 
 # DELETE a genre
-@api.route('/genre/<int:genre_id>', methods=['DELETE'])
+@api.route('/genres/<int:genre_id>', methods=['DELETE'])
 def delete_genre(genre_id):
     genre = Genre.query.get(genre_id)
     if not genre:

@@ -1,4 +1,4 @@
-export const initialStore=()=>{
+export const initialStore = () => {
   return {
     message: null,
     todos: [
@@ -15,8 +15,9 @@ export const initialStore=()=>{
     ],
     games: [],
     platforms: [],
+    genres: [],
   };
-}
+};
 
 export default function storeReducer(store, action = {}) {
   switch (action.type) {
@@ -28,7 +29,6 @@ export default function storeReducer(store, action = {}) {
 
     case "add_task":
       const { id, color } = action.payload;
-
       return {
         ...store,
         todos: store.todos.map((todo) =>
@@ -48,7 +48,13 @@ export default function storeReducer(store, action = {}) {
         platforms: action.payload,
       };
 
+     case "set_genres":
+      return {
+        ...store,
+        genres: action.payload,
+      };
+
     default:
       throw Error("Unknown action.");
-  }    
+  }
 }
