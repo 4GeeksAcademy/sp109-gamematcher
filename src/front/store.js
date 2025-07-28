@@ -14,6 +14,7 @@ export const initialStore=()=>{
       },
     ],
     games: [],
+    platforms: [],
   };
 }
 
@@ -39,6 +40,12 @@ export default function storeReducer(store, action = {}) {
       return {
         ...store,
         games: action.payload,
+      };
+
+    case "set_platforms":
+      return {
+        ...store,
+        platforms: action.payload,
       };
 
     default:
