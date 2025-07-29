@@ -30,6 +30,10 @@ export const Navbar = () => {
 					<Link to="/game-platforms">
 						<button className="btn btn-outline-primary me-2">Game-Platform</button>
 					</Link>
+
+					<Link to="/game-genres">
+						<button className="btn btn-outline-primary me-2">Game-Genres</button>
+					</Link>
 				</div>
 			</div>
 		</nav>

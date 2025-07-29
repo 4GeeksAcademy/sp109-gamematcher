@@ -74,3 +74,20 @@ class GamePlatform(db.Model):
             "game_name": self.game.name,
             "platform_name": self.platform.name
         }
+    
+class GameGenre(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    game_id: Mapped[int] = mapped_column(db.ForeignKey("game.id"), nullable=False)
+    genre_id: Mapped[int] = mapped_column(db.ForeignKey("genre.id"), nullable=False)
+
+    game = db.relationship("Game", backref="game_genres")
+    genre = db.relationship("Genre", backref="genre_games")
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "game_id": self.game_id,
+            "genre_id": self.genre_id,
+            "game_name": self.game.name,
+            "genre_name": self.genre.name
+        }
