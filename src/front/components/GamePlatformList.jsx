@@ -151,8 +151,8 @@ const GamePlatformList = () => {
                     {store.gamePlatforms?.length > 0 ? (
                         store.gamePlatforms.map((assoc) => (
                             <tr key={assoc.id}>
-                                <td>{assoc.game?.name || assoc.game_id}</td>
-                                <td>{assoc.platform?.name || assoc.platform_id}</td>
+                                <td>{assoc.game?.name || assoc.game_name}</td>
+                                <td>{assoc.platform?.name || assoc.platform_name}</td>
                                 <td className="text-center">
                                     <button
                                         className="btn btn-sm btn-outline-danger"

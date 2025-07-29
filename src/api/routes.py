@@ -208,6 +208,66 @@ def delete_platform(platform_id):
     db.session.commit()
     return jsonify({"message": f"Platform {platform_id} deleted"}), 200
 
+
+# GET all users
+@api.route('/users', methods=['GET'])
+def get_all_users():
+    users = User.query.all()
+    return jsonify([user.serialize() for user in users]), 200
+
+# GET one user by ID
+@api.route('/users/<int:user_id>', methods=['GET'])
+def get_one_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        raise APIException("User not found", status_code=404)
+    return jsonify(user.serialize()), 200
+
+# POST a new user
+@api.route('/users', methods=['POST'])
+def create_user():
+    data = request.get_json()
+
+    if not data.get("nickname") or not data.get("email") or not data.get("password"):
+        raise APIException("Nickname, email, and password are required", status_code=400)
+
+    new_user = User(
+        nickname=data["nickname"],
+        email=data["email"],
+        password=data["password"]
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify(new_user.serialize()), 201
+
+# PUT update a user
+@api.route('/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        raise APIException("User not found", status_code=404)
+
+    data = request.get_json()
+    user.nickname = data.get("nickname", user.nickname)
+    user.email = data.get("email", user.email)
+    user.password = data.get("password", user.password)
+
+    db.session.commit()
+    return jsonify(user.serialize()), 200
+
+# DELETE a user
+@api.route('/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        raise APIException("User not found", status_code=404)
+
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({"message": f"User {user_id} deleted"}), 200
+
 @api.route('/game-platforms', methods=['GET'])
 def get_all_game_platforms():
     associations = GamePlatform.query.all()
