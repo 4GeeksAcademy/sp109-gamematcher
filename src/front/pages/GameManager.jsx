@@ -50,7 +50,7 @@ export const GameManager = () => {
 
   return (
     <div className="container py-4">
-      <h2>Game Manager</h2>
+      <h2>Games</h2>
       <form onSubmit={handleSubmit} className="mb-4">
         <input
           type="text"
