@@ -2,10 +2,9 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform
+from api.models import db, User, Game, Genre, Platform, AdminUser
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
-
 
 
 api = Blueprint('api', __name__)
@@ -83,7 +82,6 @@ def delete_game(game_id):
     db.session.delete(game)
     db.session.commit()
     return jsonify({"message": f"Game {game_id} deleted"}), 200
-
 
 
 # GET all genres
@@ -207,3 +205,57 @@ def delete_platform(platform_id):
     db.session.delete(platform)
     db.session.commit()
     return jsonify({"message": f"Platform {platform_id} deleted"}), 200
+
+# GET all admins
+@api.route('/admins', methods=['GET'])
+def get_all_admin_users():
+    admins = AdminUser.query.all()
+    return jsonify([a.serialize() for a in admins]), 200
+
+# GET one admin
+@api.route('/admins/<int:admin_id>', methods=['GET'])
+def get_admin_user(admin_id):
+    admin = AdminUser.query.get(admin_id)
+    if not admin:
+        raise APIException("Admin not found", status_code=404)
+    return jsonify(admin.serialize()), 200
+
+# POST new admin
+@api.route('/admins', methods=['POST'])
+def create_admin_user():
+    data = request.get_json()
+    if not data.get("email") or not data.get("name"):
+        raise APIException("Missing fields", status_code=400)
+
+    new_admin = AdminUser(
+        email=data["email"],
+        name=data["name"]
+    )
+    db.session.add(new_admin)
+    db.session.commit()
+    return jsonify(new_admin.serialize()), 201
+
+# PUT update admin
+@api.route('/admins/<int:admin_id>', methods=['PUT'])
+def update_admin_user(admin_id):
+    admin = AdminUser.query.get(admin_id)
+    if not admin:
+        raise APIException("Admin not found", status_code=404)
+
+    data = request.get_json()
+    admin.email = data.get("email", admin.email)
+    admin.name = data.get("name", admin.name)
+
+    db.session.commit()
+    return jsonify(admin.serialize()), 200
+
+# DELETE admin
+@api.route('/admins/<int:admin_id>', methods=['DELETE'])
+def delete_admin_user(admin_id):
+    admin = AdminUser.query.get(admin_id)
+    if not admin:
+        raise APIException("Admin not found", status_code=404)
+
+    db.session.delete(admin)
+    db.session.commit()
+    return jsonify({"message": f"Admin {admin_id} deleted"}), 200

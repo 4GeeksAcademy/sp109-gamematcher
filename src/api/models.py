@@ -57,3 +57,18 @@ class Platform(db.Model):
             "name": self.name,
             "price": self.price
         }
+
+# AdminUser
+
+class AdminUser(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(120), unique=True, nullable=False)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email
+        }
