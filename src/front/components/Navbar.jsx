@@ -26,6 +26,10 @@ export const Navbar = () => {
 					<Link to="/users">
 						<button className="btn btn-outline-primary me-2">Users</button>
 					</Link>
+
+					<Link to="/game-platforms">
+						<button className="btn btn-outline-primary me-2">Game-Platform</button>
+					</Link>
 				</div>
 			</div>
 		</nav>

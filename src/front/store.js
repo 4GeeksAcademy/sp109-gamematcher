@@ -17,6 +17,7 @@ export const initialStore = () => {
     platforms: [],
     genres: [],
     users: [],
+    gamePlatforms: [],
   };
 };
 
@@ -49,18 +50,23 @@ export default function storeReducer(store, action = {}) {
         platforms: action.payload,
       };
 
-     case "set_genres":
+    case "set_genres":
       return {
         ...store,
         genres: action.payload,
       };
 
-      case "set_users":
+    case "set_users":
       return {
        ...store,
        users: action.payload,
      };
 
+    case "set_gamePlatforms":
+      return {
+        ...store,
+        gamePlatforms: action.payload,
+      };     
 
     default:
       throw Error("Unknown action.");
