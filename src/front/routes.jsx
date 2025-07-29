@@ -12,6 +12,7 @@ import { Demo } from "./pages/Demo";
 import { GameManager } from "./pages/GameManager";
 import { Platforms } from "./pages/Platforms";
 import { Genres } from "./pages/Genres";
+import GamePlatformList from "./components/GamePlatformList";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -31,6 +32,7 @@ export const router = createBrowserRouter(
       <Route path="/games" element={<GameManager />} />
       <Route path="/platforms" element={<Platforms />} />
       <Route path="/genres" element={<Genres />} />
+      <Route path="/game-platforms" element={<GamePlatformList />} />
     </Route>
   )
 );

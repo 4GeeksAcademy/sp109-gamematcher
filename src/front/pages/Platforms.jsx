@@ -8,7 +8,7 @@ export const Platforms = () => {
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  const loadPlatforms= async () => {
+  const loadPlatforms = async () => {
     const res = await fetch(`${backendUrl}/api/platforms`);
     const data = await res.json();
     dispatch({ type: "set_platforms", payload: data });

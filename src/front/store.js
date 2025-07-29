@@ -16,6 +16,7 @@ export const initialStore = () => {
     games: [],
     platforms: [],
     genres: [],
+    gamePlatforms: [],
   };
 };
 
@@ -48,10 +49,16 @@ export default function storeReducer(store, action = {}) {
         platforms: action.payload,
       };
 
-     case "set_genres":
+    case "set_genres":
       return {
         ...store,
         genres: action.payload,
+      };
+
+    case "set_gamePlatforms":
+      return {
+        ...store,
+        gamePlatforms: action.payload,
       };
 
     default:

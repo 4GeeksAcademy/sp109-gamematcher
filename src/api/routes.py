@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform
+from api.models import db, User, Game, Genre, Platform, GamePlatform
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 
@@ -207,3 +207,53 @@ def delete_platform(platform_id):
     db.session.delete(platform)
     db.session.commit()
     return jsonify({"message": f"Platform {platform_id} deleted"}), 200
+
+@api.route('/game-platforms', methods=['GET'])
+def get_all_game_platforms():
+    associations = GamePlatform.query.all()
+    return jsonify([a.serialize() for a in associations]), 200
+
+@api.route('/game-platforms', methods=['POST'])
+def create_game_platform():
+    data = request.get_json()
+
+    game_id = data.get("game_id")
+    platform_id = data.get("platform_id")
+
+    if not game_id or not platform_id:
+        return jsonify({"error": "game_id and platform_id are required"}), 400
+
+    game = Game.query.get(game_id)
+    platform = Platform.query.get(platform_id)
+
+    if not game or not platform:
+        return jsonify({"error": "Invalid game_id or platform_id"}), 404
+
+    new_relation = GamePlatform(game_id=game_id, platform_id=platform_id)
+    db.session.add(new_relation)
+    db.session.commit()
+
+    return jsonify(new_relation.serialize()), 201
+
+@api.route('/game-platforms/<int:id>', methods=['DELETE'])
+def delete_game_platform(id):
+    relation = GamePlatform.query.get(id)
+
+    if not relation:
+        return jsonify({"error": "GamePlatform relation not found"}), 404
+
+    db.session.delete(relation)
+    db.session.commit()
+
+    return jsonify({"message": f"Deleted GamePlatform with id {id}"}), 200
+
+@api.route('/game-platforms/game/<int:game_id>', methods=['GET'])
+def get_platforms_for_game(game_id):
+    relations = GamePlatform.query.filter_by(game_id=game_id).all()
+    return jsonify([r.serialize() for r in relations]), 200
+
+
+@api.route('/game-platforms/platform/<int:platform_id>', methods=['GET'])
+def get_games_for_platform(platform_id):
+    relations = GamePlatform.query.filter_by(platform_id=platform_id).all()
+    return jsonify([r.serialize() for r in relations]), 200
