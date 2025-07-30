@@ -49,6 +49,10 @@ export const Navbar = () => {
           <Link to="/user-genre-preferences">
             <button className="btn btn-outline-primary me-2">User-Genre Preferences</button>
           </Link>
+          
+          <Link to="/users/non-favorites">
+            <button className="btn btn-outline-primary me-2">User-Non-Favorites</button>
+          </Link>
         </div>
       </div>
     </nav>

@@ -170,3 +170,19 @@ class User_Game_Favorite(db.Model):
             "user_id": self.user_id,
             "game_id": self.game_id
         }
+
+class NonFavoriteGame(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(db.ForeignKey('user.id'), nullable=False)
+    game_id: Mapped[int] = mapped_column(db.ForeignKey('game.id'), nullable=False)
+
+    user = db.relationship('User', backref='non_favorite_games')
+    game = db.relationship('Game', backref='non_favorited_by_users')
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "game_id": self.game_id,
+            "game_name": self.game.name
+        }

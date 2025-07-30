@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, User_Game_Favorite, UserGenrePreference
+from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, User_Game_Favorite, UserGenrePreference, NonFavoriteGame
 
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
@@ -576,7 +576,6 @@ def create_favorite():
 
 # PUT update favorite
 
-
 @api.route('/favorites/<int:favorite_id>', methods=['PUT'])
 def update_favorite(favorite_id):
     favorite = User_Game_Favorite.query.get(favorite_id)
@@ -602,3 +601,38 @@ def delete_favorite(favorite_id):
     db.session.delete(favorite)
     db.session.commit()
     return jsonify({"message": f"Favorite {favorite_id} deleted"}), 200
+
+@api.route('/non-favorites', methods=['POST'])
+def add_non_favorite():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    game_id = data.get("game_id")
+
+    if not user_id or not game_id:
+        return jsonify({"error": "user_id and game_id are required"}), 400
+
+    relation = NonFavoriteGame(user_id=user_id, game_id=game_id)
+    db.session.add(relation)
+    db.session.commit()
+
+    return jsonify(relation.serialize()), 201
+
+@api.route('/non-favorites/<int:id>', methods=['DELETE'])
+def delete_non_favorite(id):
+    relation = NonFavoriteGame.query.get(id)
+    if not relation:
+        return jsonify({"error": "Not found"}), 404
+
+    db.session.delete(relation)
+    db.session.commit()
+    return jsonify({"message": "Deleted"}), 200
+
+@api.route('/users/<int:user_id>/non-favorites', methods=['GET'])
+def get_user_non_favorites(user_id):
+    relations = NonFavoriteGame.query.filter_by(user_id=user_id).all()
+    return jsonify([r.serialize() for r in relations]), 200
+
+@api.route('/non-favorites', methods=['GET'])
+def get_all_non_favorites():
+    relations = NonFavoriteGame.query.all()
+    return jsonify([r.serialize() for r in relations]), 200
