@@ -23,6 +23,8 @@ def handle_hello():
     return jsonify(response_body), 200
 
 # GET all games
+
+
 @api.route('/games', methods=['GET'])
 def get_all_games():
     games = Game.query.all()
@@ -146,6 +148,8 @@ def delete_genre(genre_id):
     return jsonify({"message": f"Genre {genre_id} deleted"}), 200
 
 # GET all platforms
+
+
 @api.route('/platforms', methods=['GET'])
 def get_all_platforms():
     platforms = Platform.query.all()
@@ -214,6 +218,8 @@ def get_all_users():
     return jsonify([user.serialize() for user in users]), 200
 
 # GET one user by ID
+
+
 @api.route('/users/<int:user_id>', methods=['GET'])
 def get_one_user(user_id):
     user = User.query.get(user_id)
@@ -222,12 +228,15 @@ def get_one_user(user_id):
     return jsonify(user.serialize()), 200
 
 # POST a new user
+
+
 @api.route('/users', methods=['POST'])
 def create_user():
     data = request.get_json()
 
     if not data.get("nickname") or not data.get("email") or not data.get("password"):
-        raise APIException("Nickname, email, and password are required", status_code=400)
+        raise APIException(
+            "Nickname, email, and password are required", status_code=400)
 
     new_user = User(
         nickname=data["nickname"],
@@ -241,6 +250,8 @@ def create_user():
     return jsonify(new_user.serialize()), 201
 
 # PUT update a user
+
+
 @api.route('/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
     user = User.query.get(user_id)
@@ -256,6 +267,8 @@ def update_user(user_id):
     return jsonify(user.serialize()), 200
 
 # DELETE a user
+
+
 @api.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     user = User.query.get(user_id)
@@ -266,10 +279,12 @@ def delete_user(user_id):
     db.session.commit()
     return jsonify({"message": f"User {user_id} deleted"}), 200
 
+
 @api.route('/game-platforms', methods=['GET'])
 def get_all_game_platforms():
     associations = GamePlatform.query.all()
     return jsonify([a.serialize() for a in associations]), 200
+
 
 @api.route('/game-platforms', methods=['POST'])
 def create_game_platform():
@@ -293,6 +308,7 @@ def create_game_platform():
 
     return jsonify(new_relation.serialize()), 201
 
+
 @api.route('/game-platforms/<int:id>', methods=['DELETE'])
 def delete_game_platform(id):
     relation = GamePlatform.query.get(id)
@@ -304,6 +320,7 @@ def delete_game_platform(id):
     db.session.commit()
 
     return jsonify({"message": f"Deleted GamePlatform with id {id}"}), 200
+
 
 @api.route('/game-platforms/game/<int:game_id>', methods=['GET'])
 def get_platforms_for_game(game_id):
@@ -324,6 +341,8 @@ def get_all_admin_users():
     return jsonify([a.serialize() for a in admins]), 200
 
 # GET one admin
+
+
 @api.route('/admins/<int:admin_id>', methods=['GET'])
 def get_admin_user(admin_id):
     admin = AdminUser.query.get(admin_id)
@@ -332,6 +351,8 @@ def get_admin_user(admin_id):
     return jsonify(admin.serialize()), 200
 
 # POST new admin
+
+
 @api.route('/admins', methods=['POST'])
 def create_admin_user():
     data = request.get_json()
@@ -347,6 +368,8 @@ def create_admin_user():
     return jsonify(new_admin.serialize()), 201
 
 # PUT update admin
+
+
 @api.route('/admins/<int:admin_id>', methods=['PUT'])
 def update_admin_user(admin_id):
     admin = AdminUser.query.get(admin_id)
@@ -361,6 +384,8 @@ def update_admin_user(admin_id):
     return jsonify(admin.serialize()), 200
 
 # DELETE admin
+
+
 @api.route('/admins/<int:admin_id>', methods=['DELETE'])
 def delete_admin_user(admin_id):
     admin = AdminUser.query.get(admin_id)
@@ -377,6 +402,7 @@ def delete_admin_user(admin_id):
 def get_all_game_genres():
     associations = GameGenre.query.all()
     return jsonify([a.serialize() for a in associations]), 200
+
 
 @api.route('/game-genres', methods=['POST'])
 def create_game_genre():
@@ -404,6 +430,7 @@ def create_game_genre():
 
     return jsonify(new_relation.serialize()), 201
 
+
 @api.route('/game-genres/<int:id>', methods=['DELETE'])
 def delete_game_genre(id):
     relation = GameGenre.query.get(id)
@@ -416,10 +443,12 @@ def delete_game_genre(id):
 
     return jsonify({"message": f"Deleted GameGenre with id {id}"}), 200
 
+
 @api.route('/game-genres/game/<int:game_id>', methods=['GET'])
 def get_genres_for_game(game_id):
     relations = GameGenre.query.filter_by(game_id=game_id).all()
     return jsonify([r.serialize() for r in relations]), 200
+
 
 @api.route('/game-genres/genre/<int:genre_id>', methods=['GET'])
 def get_games_for_genre(genre_id):
@@ -428,15 +457,15 @@ def get_games_for_genre(genre_id):
 
 
 # GET all user-platform preferences
-@api.route('/user-platforms', methods=['GET'])
-def get_all_user_platforms():
+@api.route('/user-platform-preferences', methods=['GET'])
+def get_all_user_platform_preferences():
     preferences = UserPlatformPreference.query.all()
     return jsonify([p.serialize() for p in preferences]), 200
 
 
 # POST new user-platform preference
-@api.route('/user-platforms', methods=['POST'])
-def create_user_platform():
+@api.route('/user-platform-preferences', methods=['POST'])
+def create_user_platform_preference():
     data = request.get_json()
 
     user_id = data.get("user_id")
@@ -451,16 +480,17 @@ def create_user_platform():
     if not user or not platform:
         return jsonify({"error": "Invalid user_id or platform_id"}), 404
 
-    new_relation = UserPlatformPreference(user_id=user_id, platform_id=platform_id)
-    db.session.add(new_relation)
+    new_preference = UserPlatformPreference(
+        user_id=user_id, platform_id=platform_id)
+    db.session.add(new_preference)
     db.session.commit()
 
-    return jsonify(new_relation.serialize()), 201
+    return jsonify(new_preference.serialize()), 201
 
 
 # DELETE a user-platform preference
-@api.route('/user-platforms/<int:id>', methods=['DELETE'])
-def delete_user_platform(id):
+@api.route('/user-platform-preferences/<int:id>', methods=['DELETE'])
+def delete_user_platform_preference(id):
     relation = UserPlatformPreference.query.get(id)
 
     if not relation:
@@ -473,14 +503,15 @@ def delete_user_platform(id):
 
 
 # GET platforms preferred by a specific user
-@api.route('/user-platforms/user/<int:user_id>', methods=['GET'])
-def get_platforms_for_user(user_id):
+@api.route('/user-platform-preferences/user/<int:user_id>', methods=['GET'])
+def get_preferences_for_user(user_id):
     relations = UserPlatformPreference.query.filter_by(user_id=user_id).all()
     return jsonify([r.serialize() for r in relations]), 200
 
 
 # GET users who prefer a specific platform
-@api.route('/user-platforms/platform/<int:platform_id>', methods=['GET'])
-def get_users_for_platform(platform_id):
-    relations = UserPlatformPreference.query.filter_by(platform_id=platform_id).all()
+@api.route('/user-platform-preferences/platform/<int:platform_id>', methods=['GET'])
+def get_users_for_platform_preference(platform_id):
+    relations = UserPlatformPreference.query.filter_by(
+        platform_id=platform_id).all()
     return jsonify([r.serialize() for r in relations]), 200
