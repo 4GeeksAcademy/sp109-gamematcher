@@ -117,3 +117,22 @@ class AdminUser(db.Model):
             "name": self.name,
             "email": self.email
         }
+    
+# Platform-Preference
+
+class UserPlatformPreference(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(db.ForeignKey("user.id"), nullable=False)
+    platform_id: Mapped[int] = mapped_column(db.ForeignKey("platform.id"), nullable=False)
+
+    user = db.relationship("User", backref="platform_preferences")
+    platform = db.relationship("Platform", backref="user_preferences")
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "platform_id": self.platform_id,
+            "user_nickname": self.user.nickname,
+            "platform_name": self.platform.name
+        }
