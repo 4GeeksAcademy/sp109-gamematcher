@@ -32,11 +32,14 @@ export const Navbar = () => {
           </Link>
           
           <Link to="/admins">
-            <button className="btn btn-outline-primary ms-2">Admins</button>
+            <button className="btn btn-outline-primary me-2">Admins</button>
+          </Link>
+
+          <Link to="/game-genres">
+            <button className="btn btn-outline-primary me-2">Game-Genres</button>
           </Link>
         </div>
       </div>
     </nav>
   );
 }
-

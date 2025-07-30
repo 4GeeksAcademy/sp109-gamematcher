@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser
+from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 
@@ -317,7 +317,7 @@ def get_games_for_platform(platform_id):
     return jsonify([r.serialize() for r in relations]), 200
 
 
-# GET all admins
+# Admin users CRUD operations
 @api.route('/admins', methods=['GET'])
 def get_all_admin_users():
     admins = AdminUser.query.all()
@@ -370,3 +370,58 @@ def delete_admin_user(admin_id):
     db.session.delete(admin)
     db.session.commit()
     return jsonify({"message": f"Admin {admin_id} deleted"}), 200
+
+
+# Game-Genre association operations
+@api.route('/game-genres', methods=['GET'])
+def get_all_game_genres():
+    associations = GameGenre.query.all()
+    return jsonify([a.serialize() for a in associations]), 200
+
+@api.route('/game-genres', methods=['POST'])
+def create_game_genre():
+    data = request.get_json()
+    print("Dades rebudes al POST:", data)
+
+    game_id = int(data.get("game_id"))
+    genre_id = int(data.get("genre_id"))
+
+    if not game_id or not genre_id:
+        return jsonify({"error": "game_id and genre_id are required"}), 400
+
+    game = Game.query.get(game_id)
+    genre = Genre.query.get(genre_id)
+
+    print("Game:", game)
+    print("Genre:", genre)
+
+    if not game or not genre:
+        return jsonify({"error": "Invalid game_id or genre_id"}), 404
+
+    new_relation = GameGenre(game_id=game_id, genre_id=genre_id)
+    db.session.add(new_relation)
+    db.session.commit()
+
+    return jsonify(new_relation.serialize()), 201
+
+@api.route('/game-genres/<int:id>', methods=['DELETE'])
+def delete_game_genre(id):
+    relation = GameGenre.query.get(id)
+
+    if not relation:
+        return jsonify({"error": "GameGenre relation not found"}), 404
+
+    db.session.delete(relation)
+    db.session.commit()
+
+    return jsonify({"message": f"Deleted GameGenre with id {id}"}), 200
+
+@api.route('/game-genres/game/<int:game_id>', methods=['GET'])
+def get_genres_for_game(game_id):
+    relations = GameGenre.query.filter_by(game_id=game_id).all()
+    return jsonify([r.serialize() for r in relations]), 200
+
+@api.route('/game-genres/genre/<int:genre_id>', methods=['GET'])
+def get_games_for_genre(genre_id):
+    relations = GameGenre.query.filter_by(genre_id=genre_id).all()
+    return jsonify([r.serialize() for r in relations]), 200
