@@ -16,6 +16,7 @@ import GamePlatformList from "./components/GamePlatformList";
 import { AdminManager } from "./pages/AdminManager";
 import GameGenreList from "./components/GameGenreList";
 import UserPlatformPreferenceList from "./components/UserPlatformPreferenceList";
+import UserGenrePreferenceList from "./components/UserGenrePreferenceList";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -31,6 +32,7 @@ export const router = createBrowserRouter(
       <Route path="/game-genres" element={<GameGenreList />} />
       <Route path="/user-platform-preferences" element={<UserPlatformPreferenceList />} />
       <Route path="/admins" element={<AdminManager />} />
+      <Route path="/user-genre-preferences" element={<UserGenrePreferenceList />} />
     </Route>
   )
 );

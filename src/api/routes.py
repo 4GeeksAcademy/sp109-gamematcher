@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference
+from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, UserGenrePreference
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 
@@ -515,3 +515,40 @@ def get_users_for_platform_preference(platform_id):
     relations = UserPlatformPreference.query.filter_by(
         platform_id=platform_id).all()
     return jsonify([r.serialize() for r in relations]), 200
+
+@api.route('/user-genre-preferences', methods=['GET'])
+def get_all_user_genre_preferences():
+    associations = UserGenrePreference.query.all()
+    return jsonify([a.serialize() for a in associations]), 200
+
+@api.route('/user-genre-preferences', methods=['POST'])
+def create_user_genre_preference():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    genre_id = data.get("genre_id")
+
+    if not user_id or not genre_id:
+        return jsonify({"error": "user_id and genre_id are required"}), 400
+
+    user = User.query.get(user_id)
+    genre = Genre.query.get(genre_id)
+
+    if not user or not genre:
+        return jsonify({"error": "Invalid user_id or genre_id"}), 404
+
+    new_relation = UserGenrePreference(user_id=user_id, genre_id=genre_id)
+    db.session.add(new_relation)
+    db.session.commit()
+
+    return jsonify(new_relation.serialize()), 201
+
+@api.route('/user-genre-preferences/<int:id>', methods=['DELETE'])
+def delete_user_genre_preference(id):
+    relation = UserGenrePreference.query.get(id)
+    if not relation:
+        return jsonify({"error": "UserGenrePreference not found"}), 404
+
+    db.session.delete(relation)
+    db.session.commit()
+
+    return jsonify({"message": f"Deleted UserGenrePreference with id {id}"}), 200

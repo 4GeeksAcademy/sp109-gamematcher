@@ -20,6 +20,7 @@ export const initialStore = () => {
     gamePlatforms: [],
     gameGenres: [],
     userPlatformPreferences: [],
+    userGenrePreferences: [],
   };
 };
 
@@ -81,6 +82,13 @@ export default function storeReducer(store, action = {}) {
         ...store,
         userPlatformPreferences: action.payload,
       };
+    
+    case "set_userGenrePreferences":
+      return {
+       ...store,
+       userGenrePreferences: action.payload,
+  };
+
 
     default:
       throw Error("Unknown action.");

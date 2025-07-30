@@ -136,3 +136,21 @@ class UserPlatformPreference(db.Model):
             "user_nickname": self.user.nickname,
             "platform_name": self.platform.name
         }
+    
+
+class UserGenrePreference(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(db.ForeignKey("user.id"), nullable=False)
+    genre_id: Mapped[int] = mapped_column(db.ForeignKey("genre.id"), nullable=False)
+
+    user = db.relationship("User", backref="user_genres")
+    genre = db.relationship("Genre", backref="genre_users")
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "genre_id": self.genre_id,
+            "user_name": self.user.nickname,
+            "genre_name": self.genre.name
+        }
