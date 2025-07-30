@@ -154,3 +154,19 @@ class UserGenrePreference(db.Model):
             "user_name": self.user.nickname,
             "genre_name": self.genre.name
         }
+
+# User-Game-favorites
+
+
+class User_Game_Favorite(db.Model):
+    __tablename__ = 'user_game_favorite'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=False)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "game_id": self.game_id
+        }

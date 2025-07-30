@@ -2,7 +2,8 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, UserGenrePreference
+from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, User_Game_Favorite, UserGenrePreference
+
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 
@@ -302,6 +303,12 @@ def create_game_platform():
     if not game or not platform:
         return jsonify({"error": "Invalid game_id or platform_id"}), 404
 
+      # Check if the association already exists
+    existing_relation = GamePlatform.query.filter_by(
+        game_id=game_id, platform_id=platform_id).first()
+    if existing_relation:
+        return jsonify({"error": "Game-Platform association already exists"}), 409
+
     new_relation = GamePlatform(game_id=game_id, platform_id=platform_id)
     db.session.add(new_relation)
     db.session.commit()
@@ -516,39 +523,82 @@ def get_users_for_platform_preference(platform_id):
         platform_id=platform_id).all()
     return jsonify([r.serialize() for r in relations]), 200
 
-@api.route('/user-genre-preferences', methods=['GET'])
-def get_all_user_genre_preferences():
-    associations = UserGenrePreference.query.all()
-    return jsonify([a.serialize() for a in associations]), 200
 
-@api.route('/user-genre-preferences', methods=['POST'])
-def create_user_genre_preference():
+# GET all favorites
+
+
+@api.route('/favorites', methods=['GET'])
+def get_all_favorites():
+    favorites = User_Game_Favorite.query.all()
+    return jsonify([f.serialize() for f in favorites]), 200
+
+# GET one favorite
+
+
+@api.route('/favorites/<int:favorite_id>', methods=['GET'])
+def get_favorite(favorite_id):
+    favorite = User_Game_Favorite.query.get(favorite_id)
+    if not favorite:
+        raise APIException("Favorite not found", 404)
+    return jsonify(favorite.serialize()), 200
+
+# POST new favorite
+
+
+@api.route('/favorites', methods=['POST'])
+def create_favorite():
     data = request.get_json()
-    user_id = data.get("user_id")
-    genre_id = data.get("genre_id")
+    if not data.get("user_id") or not data.get("game_id"):
+        raise APIException("Missing user_id or game_id", 400)
 
-    if not user_id or not genre_id:
-        return jsonify({"error": "user_id and genre_id are required"}), 400
+    user_id = data["user_id"]
+    game_id = data["game_id"]
 
+    # Validate that user and game exist
     user = User.query.get(user_id)
-    genre = Genre.query.get(genre_id)
+    game = Game.query.get(game_id)
+    
+    if not user:
+        raise APIException("User not found", 404)
+    if not game:
+        raise APIException("Game not found", 404)
 
-    if not user or not genre:
-        return jsonify({"error": "Invalid user_id or genre_id"}), 404
+    # Check if favorite already exists
+    existing_favorite = User_Game_Favorite.query.filter_by(
+        user_id=user_id, game_id=game_id).first()
+    if existing_favorite:
+        raise APIException("Favorite already exists", 409)
 
-    new_relation = UserGenrePreference(user_id=user_id, genre_id=genre_id)
-    db.session.add(new_relation)
+    new_favorite = User_Game_Favorite(user_id=user_id, game_id=game_id)
+    db.session.add(new_favorite)
     db.session.commit()
+    return jsonify(new_favorite.serialize()), 201
 
-    return jsonify(new_relation.serialize()), 201
+# PUT update favorite
 
-@api.route('/user-genre-preferences/<int:id>', methods=['DELETE'])
-def delete_user_genre_preference(id):
-    relation = UserGenrePreference.query.get(id)
-    if not relation:
-        return jsonify({"error": "UserGenrePreference not found"}), 404
 
-    db.session.delete(relation)
+@api.route('/favorites/<int:favorite_id>', methods=['PUT'])
+def update_favorite(favorite_id):
+    favorite = User_Game_Favorite.query.get(favorite_id)
+    if not favorite:
+        raise APIException("Favorite not found", 404)
+
+    data = request.get_json()
+    favorite.user_id = data.get("user_id", favorite.user_id)
+    favorite.game_id = data.get("game_id", favorite.game_id)
+
     db.session.commit()
+    return jsonify(favorite.serialize()), 200
 
-    return jsonify({"message": f"Deleted UserGenrePreference with id {id}"}), 200
+# DELETE favorite
+
+
+@api.route('/favorites/<int:favorite_id>', methods=['DELETE'])
+def delete_favorite(favorite_id):
+    favorite = User_Game_Favorite.query.get(favorite_id)
+    if not favorite:
+        raise APIException("Favorite not found", 404)
+
+    db.session.delete(favorite)
+    db.session.commit()
+    return jsonify({"message": f"Favorite {favorite_id} deleted"}), 200
