@@ -9,9 +9,9 @@ export const Navbar = () => {
           <span className="navbar-brand mb-0 h1">React Boilerplate</span>
         </Link>
         <div className="ml-auto">
-          <Link to="/demo">
+          {/* <Link to="/demo">
             <button className="btn btn-primary me-2">Check the Context in action</button>
-          </Link>
+          </Link> */}
           <Link to="/games">
             <button className="btn btn-outline-primary me-2">Games</button>
           </Link>
@@ -30,7 +30,7 @@ export const Navbar = () => {
           <Link to="/game-platforms">
             <button className="btn btn-outline-primary me-2">Game-Platform</button>
           </Link>
-          
+
           <Link to="/admins">
             <button className="btn btn-outline-primary me-2">Admins</button>
           </Link>
@@ -41,6 +41,15 @@ export const Navbar = () => {
           <Link to="/user-platform-preferences">
             <button className="btn btn-outline-primary me-2">User-Platform Preferences</button>
           </Link>
+
+          <Link to="/user-game-favorites">
+            <button className="btn btn-outline-primary me-2">User Game Favorites</button>
+          </Link>
+
+          <Link to="/user-genre-preferences">
+            <button className="btn btn-outline-primary me-2">User-Genre Preferences</button>
+          </Link>
+          
           <Link to="/users/non-favorites">
             <button className="btn btn-outline-primary me-2">User-Non-Favorites</button>
           </Link>
