@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre
+from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 
@@ -424,4 +424,63 @@ def get_genres_for_game(game_id):
 @api.route('/game-genres/genre/<int:genre_id>', methods=['GET'])
 def get_games_for_genre(genre_id):
     relations = GameGenre.query.filter_by(genre_id=genre_id).all()
+    return jsonify([r.serialize() for r in relations]), 200
+
+
+# GET all user-platform preferences
+@api.route('/user-platforms', methods=['GET'])
+def get_all_user_platforms():
+    preferences = UserPlatformPreference.query.all()
+    return jsonify([p.serialize() for p in preferences]), 200
+
+
+# POST new user-platform preference
+@api.route('/user-platforms', methods=['POST'])
+def create_user_platform():
+    data = request.get_json()
+
+    user_id = data.get("user_id")
+    platform_id = data.get("platform_id")
+
+    if not user_id or not platform_id:
+        return jsonify({"error": "user_id and platform_id are required"}), 400
+
+    user = User.query.get(user_id)
+    platform = Platform.query.get(platform_id)
+
+    if not user or not platform:
+        return jsonify({"error": "Invalid user_id or platform_id"}), 404
+
+    new_relation = UserPlatformPreference(user_id=user_id, platform_id=platform_id)
+    db.session.add(new_relation)
+    db.session.commit()
+
+    return jsonify(new_relation.serialize()), 201
+
+
+# DELETE a user-platform preference
+@api.route('/user-platforms/<int:id>', methods=['DELETE'])
+def delete_user_platform(id):
+    relation = UserPlatformPreference.query.get(id)
+
+    if not relation:
+        return jsonify({"error": "UserPlatformPreference not found"}), 404
+
+    db.session.delete(relation)
+    db.session.commit()
+
+    return jsonify({"message": f"Deleted UserPlatformPreference with id {id}"}), 200
+
+
+# GET platforms preferred by a specific user
+@api.route('/user-platforms/user/<int:user_id>', methods=['GET'])
+def get_platforms_for_user(user_id):
+    relations = UserPlatformPreference.query.filter_by(user_id=user_id).all()
+    return jsonify([r.serialize() for r in relations]), 200
+
+
+# GET users who prefer a specific platform
+@api.route('/user-platforms/platform/<int:platform_id>', methods=['GET'])
+def get_users_for_platform(platform_id):
+    relations = UserPlatformPreference.query.filter_by(platform_id=platform_id).all()
     return jsonify([r.serialize() for r in relations]), 200

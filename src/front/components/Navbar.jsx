@@ -38,6 +38,9 @@ export const Navbar = () => {
           <Link to="/game-genres">
             <button className="btn btn-outline-primary me-2">Game-Genres</button>
           </Link>
+          <Link to="/user-platform-preferences">
+            <button className="btn btn-outline-primary me-2">User-Platform Preferences</button>
+          </Link>
         </div>
       </div>
     </nav>
