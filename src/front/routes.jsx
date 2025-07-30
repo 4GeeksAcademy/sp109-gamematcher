@@ -14,6 +14,7 @@ import { Platforms } from "./pages/Platforms";
 import { Genres } from "./pages/Genres";
 import { Users } from "./pages/Users";
 import GamePlatformList from "./components/GamePlatformList";
+import { AdminManager } from "./pages/AdminManager";
 import GameGenreList from "./components/GameGenreList";
 
 export const router = createBrowserRouter(
@@ -36,6 +37,7 @@ export const router = createBrowserRouter(
       <Route path="/genres" element={<Genres />} />
       <Route path="/users" element={<Users />} />
       <Route path="/game-platforms" element={<GamePlatformList />} />
+      <Route path="/admins" element={<AdminManager />} />
       <Route path="/game-genres" element={<GameGenreList />} />
     </Route>
   )

@@ -4,11 +4,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 db = SQLAlchemy()
 
-# Users    
+# Users
+
+
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     nickname: Mapped[str] = mapped_column(String(120), nullable=False)
-    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(120), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(200), nullable=False)
 
     def serialize(self):
@@ -20,6 +23,8 @@ class User(db.Model):
         }
 
 # Games
+
+
 class Game(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -33,6 +38,8 @@ class Game(db.Model):
         }
 
 # Genres
+
+
 class Genre(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -46,6 +53,8 @@ class Genre(db.Model):
         }
 
 # Platforms
+
+
 class Platform(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -58,10 +67,13 @@ class Platform(db.Model):
             "price": self.price
         }
 
+
 class GamePlatform(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    game_id: Mapped[int] = mapped_column(db.ForeignKey("game.id"), nullable=False)
-    platform_id: Mapped[int] = mapped_column(db.ForeignKey("platform.id"), nullable=False)
+    game_id: Mapped[int] = mapped_column(
+        db.ForeignKey("game.id"), nullable=False)
+    platform_id: Mapped[int] = mapped_column(
+        db.ForeignKey("platform.id"), nullable=False)
 
     game = db.relationship("Game", backref="game_platforms")
     platform = db.relationship("Platform", backref="platform_games")
@@ -74,7 +86,8 @@ class GamePlatform(db.Model):
             "game_name": self.game.name,
             "platform_name": self.platform.name
         }
-    
+
+
 class GameGenre(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     game_id: Mapped[int] = mapped_column(db.ForeignKey("game.id"), nullable=False)
@@ -90,4 +103,17 @@ class GameGenre(db.Model):
             "genre_id": self.genre_id,
             "game_name": self.game.name,
             "genre_name": self.genre.name
+        }
+
+
+class AdminUser(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email
         }
