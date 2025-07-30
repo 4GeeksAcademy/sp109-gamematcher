@@ -41,8 +41,13 @@ export const Navbar = () => {
           <Link to="/user-platform-preferences">
             <button className="btn btn-outline-primary me-2">User-Platform Preferences</button>
           </Link>
+
           <Link to="/user-game-favorites">
             <button className="btn btn-outline-primary me-2">User Game Favorites</button>
+          </Link>
+
+          <Link to="/user-genre-preferences">
+            <button className="btn btn-outline-primary me-2">User-Genre Preferences</button>
           </Link>
         </div>
       </div>
