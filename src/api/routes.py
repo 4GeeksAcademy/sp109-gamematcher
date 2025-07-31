@@ -11,7 +11,7 @@ from flask_cors import CORS
 api = Blueprint('api', __name__)
 
 # Allow CORS requests to this API
-CORS(api)
+CORS(api, methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 
 @api.route('/hello', methods=['POST', 'GET'])
@@ -49,15 +49,39 @@ def create_game():
     if not data.get("name"):
         raise APIException("Game name is required", status_code=400)
 
-    new_game = Game(
-        name=data["name"],
-        description=data.get("description")
-    )
+    # Si se proporciona un ID específico (como de RAWG), verificar si ya existe
+    if data.get("id"):
+        existing_game = Game.query.get(data["id"])
+        if existing_game:
+            # Si el juego ya existe, devolvemos el existente
+            return jsonify(existing_game.serialize()), 200
+
+        # Crear juego con ID específico
+        new_game = Game(
+            id=data["id"],
+            name=data["name"],
+            description=data.get("description")
+        )
+    else:
+        # Crear juego con ID auto-generado
+        new_game = Game(
+            name=data["name"],
+            description=data.get("description")
+        )
 
     db.session.add(new_game)
-    db.session.commit()
 
-    return jsonify(new_game.serialize()), 201
+    try:
+        db.session.commit()
+        return jsonify(new_game.serialize()), 201
+    except Exception as e:
+        db.session.rollback()
+        # Si hay un error de duplicado, intentar buscar el juego existente
+        if data.get("id"):
+            existing_game = Game.query.get(data["id"])
+            if existing_game:
+                return jsonify(existing_game.serialize()), 200
+        raise APIException("Error creating game", status_code=500)
 
 
 # PUT update a game
@@ -276,9 +300,31 @@ def delete_user(user_id):
     if not user:
         raise APIException("User not found", status_code=404)
 
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({"message": f"User {user_id} deleted"}), 200
+    try:
+        # Eliminar todas las relaciones del usuario antes de eliminarlo
+        
+        # 1. Eliminar preferencias de plataforma
+        UserPlatformPreference.query.filter_by(user_id=user_id).delete()
+        
+        # 2. Eliminar preferencias de género
+        UserGenrePreference.query.filter_by(user_id=user_id).delete()
+        
+        # 3. Eliminar favoritos
+        User_Game_Favorite.query.filter_by(user_id=user_id).delete()
+        
+        # 4. Eliminar no favoritos
+        NonFavoriteGame.query.filter_by(user_id=user_id).delete()
+        
+        # 5. Ahora eliminar el usuario
+        db.session.delete(user)
+        db.session.commit()
+        
+        return jsonify({"message": f"User {user_id} and all related data deleted"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting user {user_id}: {str(e)}")
+        raise APIException(f"Error deleting user: {str(e)}", status_code=500)
 
 
 @api.route('/game-platforms', methods=['GET'])
@@ -557,7 +603,7 @@ def create_favorite():
     # Validate that user and game exist
     user = User.query.get(user_id)
     game = Game.query.get(game_id)
-    
+
     if not user:
         raise APIException("User not found", 404)
     if not game:
@@ -575,6 +621,7 @@ def create_favorite():
     return jsonify(new_favorite.serialize()), 201
 
 # PUT update favorite
+
 
 @api.route('/favorites/<int:favorite_id>', methods=['PUT'])
 def update_favorite(favorite_id):
@@ -602,6 +649,7 @@ def delete_favorite(favorite_id):
     db.session.commit()
     return jsonify({"message": f"Favorite {favorite_id} deleted"}), 200
 
+
 @api.route('/non-favorites', methods=['POST'])
 def add_non_favorite():
     data = request.get_json()
@@ -617,6 +665,7 @@ def add_non_favorite():
 
     return jsonify(relation.serialize()), 201
 
+
 @api.route('/non-favorites/<int:id>', methods=['DELETE'])
 def delete_non_favorite(id):
     relation = NonFavoriteGame.query.get(id)
@@ -627,10 +676,12 @@ def delete_non_favorite(id):
     db.session.commit()
     return jsonify({"message": "Deleted"}), 200
 
+
 @api.route('/users/<int:user_id>/non-favorites', methods=['GET'])
 def get_user_non_favorites(user_id):
     relations = NonFavoriteGame.query.filter_by(user_id=user_id).all()
     return jsonify([r.serialize() for r in relations]), 200
+
 
 @api.route('/non-favorites', methods=['GET'])
 def get_all_non_favorites():
