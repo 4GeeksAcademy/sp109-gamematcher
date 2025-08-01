@@ -7,6 +7,11 @@ from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser,
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+
+from sqlalchemy import select
 
 api = Blueprint('api', __name__)
 
@@ -418,7 +423,8 @@ def create_admin_user():
 
     new_admin = AdminUser(
         email=data["email"],
-        name=data["name"]
+        name=data["name"],
+        password=data["password"]
     )
     db.session.add(new_admin)
     db.session.commit()
@@ -436,6 +442,7 @@ def update_admin_user(admin_id):
     data = request.get_json()
     admin.email = data.get("email", admin.email)
     admin.name = data.get("name", admin.name)
+    admin.password = data.get("password", admin.password)
 
     db.session.commit()
     return jsonify(admin.serialize()), 200
@@ -703,3 +710,19 @@ def get_user_non_favorites(user_id):
 def get_all_non_favorites():
     relations = NonFavoriteGame.query.all()
     return jsonify([r.serialize() for r in relations]), 200
+
+@api.route("/admin-login", methods=["POST"])
+def admin_login():
+    name = request.json.get("name", None)
+    password = request.json.get("password", None)
+
+    adminUser = db.session.execute(select(AdminUser).where(AdminUser.name == name)).scalar_one_or_none()
+
+    if adminUser is None:
+        return jsonify({"msg": "Bad name or password"}), 401
+
+    if password != adminUser.password:
+        return jsonify({"msg": "Bad name or password"}), 401
+
+    access_token = create_access_token(identity=name)
+    return jsonify(access_token=access_token)
