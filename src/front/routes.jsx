@@ -19,6 +19,7 @@ import { UserGameFavoriteManager } from "./pages/UserGameFavoriteManager";
 import NonFavoriteGameList from './components/NonFavoriteGameList';
 import { RawgGameList } from "./pages/RawgGameList";
 import { RawgGameDetail } from "./pages/RawgGameDetail";
+import AdminLoginForm from "./components/AdminLoginForm";
 
 
 
@@ -39,7 +40,7 @@ export const router = createBrowserRouter(
       <Route path="/users/non-favorites" element={<NonFavoriteGameList />} />
       <Route path="/rawg" element={<RawgGameList />} />
       <Route path="/rawg-games/:id" element={<RawgGameDetail />} />
-
+      <Route path="/admin-login" element={<AdminLoginForm />} />
     </Route>
   )
 );
