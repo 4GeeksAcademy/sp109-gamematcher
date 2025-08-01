@@ -39,8 +39,26 @@ export const Users = () => {
   };
 
   const handleDelete = async (id) => {
-    const res = await fetch(`${backendUrl}/api/users/${id}`, { method: "DELETE" });
-    if (res.ok) loadUsers();
+    try {
+      const res = await fetch(`${backendUrl}/api/users/${id}`, { 
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (res.ok) {
+        console.log("Usuario eliminado correctamente");
+        loadUsers();
+      } else {
+        const error = await res.json();
+        console.error("Error del servidor:", error);
+        alert("Error al eliminar usuario: " + error.message);
+      }
+    } catch (err) {
+      console.error("Error de conexión:", err);
+      alert("Error de conexión con el servidor");
+    }
   };
 
   const handleEdit = (user) => {

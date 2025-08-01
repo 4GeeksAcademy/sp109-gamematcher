@@ -6,8 +6,6 @@ import {
 } from "react-router-dom";
 import { Layout } from "./pages/Layout";
 import { Home } from "./pages/Home";
-import { Single } from "./pages/Single";
-import { Demo } from "./pages/Demo";
 import { GameManager } from "./pages/GameManager";
 import { Platforms } from "./pages/Platforms";
 import { Genres } from "./pages/Genres";
@@ -19,13 +17,15 @@ import UserPlatformPreferenceList from "./components/UserPlatformPreferenceList"
 import UserGenrePreferenceList from "./components/UserGenrePreferenceList";
 import { UserGameFavoriteManager } from "./pages/UserGameFavoriteManager";
 import NonFavoriteGameList from './components/NonFavoriteGameList';
+import { RawgGameList } from "./pages/RawgGameList";
+import { RawgGameDetail } from "./pages/RawgGameDetail";
+
+
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<Layout />} errorElement={<h1>Not found!</h1>} >
       <Route path="/" element={<Home />} />
-      <Route path="/single/:theId" element={<Single />} />
-      <Route path="/demo" element={<Demo />} />
       <Route path="/games" element={<GameManager />} />
       <Route path="/platforms" element={<Platforms />} />
       <Route path="/genres" element={<Genres />} />
@@ -37,6 +37,9 @@ export const router = createBrowserRouter(
       <Route path="/user-genre-preferences" element={<UserGenrePreferenceList />} />
       <Route path="/user-game-favorites" element={<UserGameFavoriteManager />} />
       <Route path="/users/non-favorites" element={<NonFavoriteGameList />} />
+      <Route path="/rawg" element={<RawgGameList />} />
+      <Route path="/rawg-games/:id" element={<RawgGameDetail />} />
+
     </Route>
   )
 );
