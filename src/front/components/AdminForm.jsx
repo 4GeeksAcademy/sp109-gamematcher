@@ -25,6 +25,16 @@ export const AdminForm = ({ form, setForm, onSubmit, onCancel, isEditing }) => {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
             />
+            </div>
+            <div className="mb-3">
+            <input
+              type="password"
+              className="form-control"
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+            />
           </div>
           <div>
             <button
