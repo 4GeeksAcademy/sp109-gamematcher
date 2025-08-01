@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, User_Game_Favorite, UserGenrePreference, NonFavoriteGame
+from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, User_Game_Favorite, UserGenrePreference, NonFavoriteGame, UserLogin
 
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
@@ -805,3 +805,38 @@ def delete_user_genre_preference(id):
     db.session.commit()
 
     return jsonify({"message": f"Deleted UserGenrePreference with id {id}"}), 200
+
+# UserLogin Signup
+@api.route("/user-signup", methods=["POST"])
+def user_signup():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"msg": "Email and password required"}), 400
+
+    existing_user = UserLogin.query.filter_by(email=email).first()
+    if existing_user:
+        return jsonify({"msg": "User already exists"}), 409
+
+    new_user = UserLogin(email=email, password=password, is_active=True)
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({"msg": "User registered successfully"}), 201
+
+# UserLogin Login
+@api.route("/user-login", methods=["POST"])
+def user_login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    user = UserLogin.query.filter_by(email=email).first()
+
+    if user is None or user.password != password:
+        return jsonify({"msg": "Invalid credentials"}), 401
+
+    access_token = create_access_token(identity=user.email)
+    return jsonify(access_token=access_token, msg="Login successful"), 200

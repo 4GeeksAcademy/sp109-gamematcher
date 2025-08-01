@@ -4,6 +4,7 @@ import {
   createRoutesFromElements,
   Route,
 } from "react-router-dom";
+
 import { Layout } from "./pages/Layout";
 import { Home } from "./pages/Home";
 import { GameManager } from "./pages/GameManager";
@@ -16,11 +17,10 @@ import GameGenreList from "./components/GameGenreList";
 import UserPlatformPreferenceList from "./components/UserPlatformPreferenceList";
 import UserGenrePreferenceList from "./components/UserGenrePreferenceList";
 import { UserGameFavoriteManager } from "./pages/UserGameFavoriteManager";
-import NonFavoriteGameList from './components/NonFavoriteGameList';
+import NonFavoriteGameList from "./components/NonFavoriteGameList";
 import { RawgGameList } from "./pages/RawgGameList";
 import { RawgGameDetail } from "./pages/RawgGameDetail";
-
-
+import { UserLoginPanel } from "./components/UserLoginPanel";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -39,7 +39,7 @@ export const router = createBrowserRouter(
       <Route path="/users/non-favorites" element={<NonFavoriteGameList />} />
       <Route path="/rawg" element={<RawgGameList />} />
       <Route path="/rawg-games/:id" element={<RawgGameDetail />} />
-
+      <Route path="/user-login" element={<UserLoginPanel />} /> 
     </Route>
   )
 );
