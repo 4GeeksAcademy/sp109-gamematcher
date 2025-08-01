@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 export const RawgGameDetail = () => {
+  //Utilizamos useParams para obtener el ID del juego de la URL
   const { id } = useParams();
   const apiKey = import.meta.env.VITE_RAWG_API_KEY;
   const [game, setGame] = useState(null);
@@ -38,14 +39,12 @@ export const RawgGameDetail = () => {
 
   const handleAddFavorite = async () => {
     try {
-      // Primero, crear/verificar que el juego existe en nuestra base de datos
       const gameData = {
-        id: game.id, // ID de RAWG
+        id: game.id,
         name: game.name,
         description: game.description_raw || "Sin descripción"
       };
 
-      // Intentar crear el juego primero (si no existe, lo crea; si existe, lo devuelve)
       const gameResponse = await fetch(`${backendUrl}/api/games`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -59,12 +58,11 @@ export const RawgGameDetail = () => {
         return;
       }
 
-      // Ahora añadir a favoritos
       const favResponse = await fetch(`${backendUrl}/api/favorites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: 1, // 🔧 Simulado hasta que tengas auth
+          user_id: 1,
           game_id: game.id,
         }),
       });
@@ -95,7 +93,8 @@ export const RawgGameDetail = () => {
         </div>
         <div className="col-md-8">
           <Link to="/rawg" className="btn btn-outline-secondary btn-sm">
-            ← Volver a la lista
+            <i className="fa-solid fa-arrow-left me-2"></i>
+            Volver a la lista
           </Link>
 
           <h1 className="mb-3">{game.name}</h1>

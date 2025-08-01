@@ -182,6 +182,8 @@ def get_all_platforms():
 
 
 # GET one platform by ID
+
+
 @api.route('/platforms/<int:platform_id>', methods=['GET'])
 def get_one_platform(platform_id):
     platform = Platform.query.get(platform_id)
@@ -191,6 +193,8 @@ def get_one_platform(platform_id):
 
 
 # POST a new platform
+
+
 @api.route('/platforms', methods=['POST'])
 def create_platform():
     data = request.get_json()
@@ -210,6 +214,8 @@ def create_platform():
 
 
 # PUT update a platform
+
+
 @api.route('/platforms/<int:platform_id>', methods=['PUT'])
 def update_platform(platform_id):
     platform = Platform.query.get(platform_id)
@@ -225,6 +231,8 @@ def update_platform(platform_id):
 
 
 # DELETE a platform
+
+
 @api.route('/platforms/<int:platform_id>', methods=['DELETE'])
 def delete_platform(platform_id):
     platform = Platform.query.get(platform_id)
@@ -237,6 +245,8 @@ def delete_platform(platform_id):
 
 
 # GET all users
+
+
 @api.route('/users', methods=['GET'])
 def get_all_users():
     users = User.query.all()
@@ -301,26 +311,19 @@ def delete_user(user_id):
         raise APIException("User not found", status_code=404)
 
     try:
-        # Eliminar todas las relaciones del usuario antes de eliminarlo
-        
-        # 1. Eliminar preferencias de plataforma
         UserPlatformPreference.query.filter_by(user_id=user_id).delete()
-        
-        # 2. Eliminar preferencias de género
+
         UserGenrePreference.query.filter_by(user_id=user_id).delete()
-        
-        # 3. Eliminar favoritos
+
         User_Game_Favorite.query.filter_by(user_id=user_id).delete()
-        
-        # 4. Eliminar no favoritos
+
         NonFavoriteGame.query.filter_by(user_id=user_id).delete()
-        
-        # 5. Ahora eliminar el usuario
+
         db.session.delete(user)
         db.session.commit()
-        
+
         return jsonify({"message": f"User {user_id} and all related data deleted"}), 200
-        
+
     except Exception as e:
         db.session.rollback()
         print(f"Error deleting user {user_id}: {str(e)}")
@@ -349,7 +352,6 @@ def create_game_platform():
     if not game or not platform:
         return jsonify({"error": "Invalid game_id or platform_id"}), 404
 
-      # Check if the association already exists
     existing_relation = GamePlatform.query.filter_by(
         game_id=game_id, platform_id=platform_id).first()
     if existing_relation:
@@ -388,6 +390,8 @@ def get_games_for_platform(platform_id):
 
 
 # Admin users CRUD operations
+
+
 @api.route('/admins', methods=['GET'])
 def get_all_admin_users():
     admins = AdminUser.query.all()
@@ -451,6 +455,8 @@ def delete_admin_user(admin_id):
 
 
 # Game-Genre association operations
+
+
 @api.route('/game-genres', methods=['GET'])
 def get_all_game_genres():
     associations = GameGenre.query.all()
@@ -510,6 +516,8 @@ def get_games_for_genre(genre_id):
 
 
 # GET all user-platform preferences
+
+
 @api.route('/user-platform-preferences', methods=['GET'])
 def get_all_user_platform_preferences():
     preferences = UserPlatformPreference.query.all()
@@ -517,6 +525,8 @@ def get_all_user_platform_preferences():
 
 
 # POST new user-platform preference
+
+
 @api.route('/user-platform-preferences', methods=['POST'])
 def create_user_platform_preference():
     data = request.get_json()
@@ -542,6 +552,8 @@ def create_user_platform_preference():
 
 
 # DELETE a user-platform preference
+
+
 @api.route('/user-platform-preferences/<int:id>', methods=['DELETE'])
 def delete_user_platform_preference(id):
     relation = UserPlatformPreference.query.get(id)
@@ -556,6 +568,8 @@ def delete_user_platform_preference(id):
 
 
 # GET platforms preferred by a specific user
+
+
 @api.route('/user-platform-preferences/user/<int:user_id>', methods=['GET'])
 def get_preferences_for_user(user_id):
     relations = UserPlatformPreference.query.filter_by(user_id=user_id).all()
@@ -563,6 +577,8 @@ def get_preferences_for_user(user_id):
 
 
 # GET users who prefer a specific platform
+
+
 @api.route('/user-platform-preferences/platform/<int:platform_id>', methods=['GET'])
 def get_users_for_platform_preference(platform_id):
     relations = UserPlatformPreference.query.filter_by(
@@ -600,7 +616,7 @@ def create_favorite():
     user_id = data["user_id"]
     game_id = data["game_id"]
 
-    # Validate that user and game exist
+    # Validar que el usuario y el juego existen
     user = User.query.get(user_id)
     game = Game.query.get(game_id)
 
@@ -609,7 +625,7 @@ def create_favorite():
     if not game:
         raise APIException("Game not found", 404)
 
-    # Check if favorite already exists
+    # Comprobar si ya existe una relación de favorito
     existing_favorite = User_Game_Favorite.query.filter_by(
         user_id=user_id, game_id=game_id).first()
     if existing_favorite:

@@ -8,7 +8,8 @@ export const RawgGameList = () => {
 
   const fetchGames = async () => {
     try {
-      const res = await fetch(`https://api.rawg.io/api/games?key=${apiKey}`);
+      // page_size=18 muestra el numero de jueguitos que se ven
+      const res = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&page_size=18`);
       const data = await res.json();
       dispatch({ type: "set_rawg_games", payload: data.results });
     } catch (err) {
