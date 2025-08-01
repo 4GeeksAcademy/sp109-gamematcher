@@ -187,3 +187,4 @@ class NonFavoriteGame(db.Model):
             "game_id": self.game_id,
             "game_name": self.game.name
         }
+    

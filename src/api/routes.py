@@ -805,4 +805,3 @@ def delete_user_genre_preference(id):
     db.session.commit()
 
     return jsonify({"message": f"Deleted UserGenrePreference with id {id}"}), 200
-
