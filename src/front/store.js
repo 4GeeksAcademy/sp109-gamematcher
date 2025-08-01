@@ -9,7 +9,9 @@ export const initialStore = () => {
     gameGenres: [],
     userPlatformPreferences: [],
     userGenrePreferences: [],
-    rawgGames: []
+    rawgGames: [],
+    isAdminAuthenticated: false,
+    adminToken: null,
   };
 };
 
@@ -73,6 +75,20 @@ export default function storeReducer(store, action = {}) {
       return {
         ...store,
         rawgGames: action.payload,
+      };
+
+    case "ADMIN_LOGIN":
+      return {
+        ...store,
+        isAdminAuthenticated: true,
+        adminToken: action.payload,
+      };
+
+    case "ADMIN_LOGOUT":
+      return {
+        ...store,
+        isAdminAuthenticated: false,
+        adminToken: null,
       };
 
     default:

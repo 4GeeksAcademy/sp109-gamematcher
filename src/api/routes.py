@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, User_Game_Favorite, UserGenrePreference, NonFavoriteGame, UserLogin
+from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, UserGameFavorite, UserGenrePreference, NonFavoriteGame, UserLogin
 
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
@@ -16,7 +16,10 @@ from sqlalchemy import select
 api = Blueprint('api', __name__)
 
 # Allow CORS requests to this API
-CORS(api, methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+CORS(api, 
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Authorization'],
+     origins=['*'])
 
 
 @api.route('/hello', methods=['POST', 'GET'])
@@ -111,9 +114,33 @@ def delete_game(game_id):
     if not game:
         raise APIException("Game not found", status_code=404)
 
-    db.session.delete(game)
-    db.session.commit()
-    return jsonify({"message": f"Game {game_id} deleted"}), 200
+    try:
+        # Eliminar todas las relaciones del juego antes de eliminarlo
+        
+        # Eliminar relaciones game-platform
+        GamePlatform.query.filter_by(game_id=game_id).delete()
+        
+        # Eliminar relaciones game-genre
+        GameGenre.query.filter_by(game_id=game_id).delete()
+        
+        # Eliminar favoritos
+        favorites = UserGameFavorite.query.filter_by(game_id=game_id).all()
+        for fav in favorites:
+            db.session.delete(fav)
+        
+        # Eliminar no favoritos
+        NonFavoriteGame.query.filter_by(game_id=game_id).delete()
+        
+        # Eliminar el juego
+        db.session.delete(game)
+        db.session.commit()
+        
+        return jsonify({"message": f"Game {game_id} and all related data deleted"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting game {game_id}: {str(e)}")
+        raise APIException(f"Error deleting game: {str(e)}", status_code=500)
 
 
 # GET all genres
@@ -320,7 +347,10 @@ def delete_user(user_id):
 
         UserGenrePreference.query.filter_by(user_id=user_id).delete()
 
-        User_Game_Favorite.query.filter_by(user_id=user_id).delete()
+        # Eliminar favoritos del usuario
+        user_favorites = UserGameFavorite.query.filter_by(user_id=user_id).all()
+        for fav in user_favorites:
+            db.session.delete(fav)
 
         NonFavoriteGame.query.filter_by(user_id=user_id).delete()
 
@@ -598,7 +628,7 @@ def get_users_for_platform_preference(platform_id):
 
 @api.route('/favorites', methods=['GET'])
 def get_all_favorites():
-    favorites = User_Game_Favorite.query.all()
+    favorites = UserGameFavorite.query.all()
     return jsonify([f.serialize() for f in favorites]), 200
 
 # GET one favorite
@@ -606,7 +636,7 @@ def get_all_favorites():
 
 @api.route('/favorites/<int:favorite_id>', methods=['GET'])
 def get_favorite(favorite_id):
-    favorite = User_Game_Favorite.query.get(favorite_id)
+    favorite = UserGameFavorite.query.get(favorite_id)
     if not favorite:
         raise APIException("Favorite not found", 404)
     return jsonify(favorite.serialize()), 200
@@ -633,12 +663,12 @@ def create_favorite():
         raise APIException("Game not found", 404)
 
     # Comprobar si ya existe una relación de favorito
-    existing_favorite = User_Game_Favorite.query.filter_by(
+    existing_favorite = UserGameFavorite.query.filter_by(
         user_id=user_id, game_id=game_id).first()
     if existing_favorite:
         raise APIException("Favorite already exists", 409)
 
-    new_favorite = User_Game_Favorite(user_id=user_id, game_id=game_id)
+    new_favorite = UserGameFavorite(user_id=user_id, game_id=game_id)
     db.session.add(new_favorite)
     db.session.commit()
     return jsonify(new_favorite.serialize()), 201
@@ -648,7 +678,7 @@ def create_favorite():
 
 @api.route('/favorites/<int:favorite_id>', methods=['PUT'])
 def update_favorite(favorite_id):
-    favorite = User_Game_Favorite.query.get(favorite_id)
+    favorite = UserGameFavorite.query.get(favorite_id)
     if not favorite:
         raise APIException("Favorite not found", 404)
 
@@ -664,7 +694,7 @@ def update_favorite(favorite_id):
 
 @api.route('/favorites/<int:favorite_id>', methods=['DELETE'])
 def delete_favorite(favorite_id):
-    favorite = User_Game_Favorite.query.get(favorite_id)
+    favorite = UserGameFavorite.query.get(favorite_id)
     if not favorite:
         raise APIException("Favorite not found", 404)
 
@@ -711,6 +741,7 @@ def get_all_non_favorites():
     relations = NonFavoriteGame.query.all()
     return jsonify([r.serialize() for r in relations]), 200
 
+
 @api.route("/admin-login", methods=["POST"])
 def admin_login():
     name = request.json.get("name", None)
@@ -725,7 +756,7 @@ def admin_login():
         return jsonify({"msg": "Bad name or password"}), 401
 
     access_token = create_access_token(identity=name)
-    return jsonify(access_token=access_token)
+    return jsonify(access_token=access_token), 200
 
 
 # GET all user-genre preferences
