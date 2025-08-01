@@ -4,7 +4,7 @@ import { Alert } from "../components/Alert";
 
 export const AdminManager = () => {
   const [admins, setAdmins] = useState([]);
-  const [form, setForm] = useState({ name: "", email: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -44,7 +44,7 @@ export const AdminManager = () => {
       });
 
       if (res.ok) {
-        setForm({ name: "", email: "" });
+        setForm({ name: "", email: "", password: "" });
         setEditingId(null);
         loadAdmins();
         setMessage(editingId ? "Admin actualizado" : "Admin creado");
@@ -76,12 +76,12 @@ export const AdminManager = () => {
   };
 
   const handleEdit = (admin) => {
-    setForm({ name: admin.name, email: admin.email });
+    setForm({ name: admin.name, email: admin.email, password: admin.password });
     setEditingId(admin.id);
   };
 
   const handleNewAdmin = () => {
-    setForm({ name: "", email: "" });
+    setForm({ name: "", email: "", password: "" });
     setEditingId(null);
     setMessage("");
   };

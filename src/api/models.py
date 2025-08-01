@@ -19,7 +19,6 @@ class User(db.Model):
             "id": self.id,
             "nickname": self.nickname,
             "email": self.email,
-            "password": self.password
         }
 
 # Games
@@ -87,21 +86,6 @@ class GamePlatform(db.Model):
             "platform_name": self.platform.name
         }
 
-
-class AdminUser(db.Model):
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(120), nullable=False)
-    email: Mapped[str] = mapped_column(
-        String(120), unique=True, nullable=False)
-
-    def serialize(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "email": self.email
-        }
-
-
 class GameGenre(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     game_id: Mapped[int] = mapped_column(
@@ -121,6 +105,21 @@ class GameGenre(db.Model):
             "genre_name": self.genre.name
         }
 
+
+class AdminUser(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    password: Mapped[str] = mapped_column(String(200), nullable=False)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email
+        }
+    
+# Platform-Preference
 
 class UserPlatformPreference(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -162,11 +161,16 @@ class UserGenrePreference(db.Model):
         }
 
 
-class User_Game_Favorite(db.Model):
+class UserGameFavorite(db.Model):
     __tablename__ = 'user_game_favorite'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        db.ForeignKey('user.id'), nullable=False)
+    game_id: Mapped[int] = mapped_column(
+        db.ForeignKey('game.id'), nullable=False)
+
+    user = db.relationship("User", backref="favorites")
+    game = db.relationship("Game", backref="favorited_by")
 
     def serialize(self):
         return {
