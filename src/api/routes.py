@@ -11,7 +11,10 @@ from flask_cors import CORS
 api = Blueprint('api', __name__)
 
 # Allow CORS requests to this API
-CORS(api, methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+CORS(api, 
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Authorization'],
+     origins=['*'])
 
 
 @api.route('/hello', methods=['POST', 'GET'])
@@ -106,9 +109,31 @@ def delete_game(game_id):
     if not game:
         raise APIException("Game not found", status_code=404)
 
-    db.session.delete(game)
-    db.session.commit()
-    return jsonify({"message": f"Game {game_id} deleted"}), 200
+    try:
+        # Eliminar todas las relaciones del juego antes de eliminarlo
+        
+        # Eliminar relaciones game-platform
+        GamePlatform.query.filter_by(game_id=game_id).delete()
+        
+        # Eliminar relaciones game-genre
+        GameGenre.query.filter_by(game_id=game_id).delete()
+        
+        # Eliminar favoritos
+        User_Game_Favorite.query.filter_by(game_id=game_id).delete()
+        
+        # Eliminar no favoritos
+        NonFavoriteGame.query.filter_by(game_id=game_id).delete()
+        
+        # Eliminar el juego
+        db.session.delete(game)
+        db.session.commit()
+        
+        return jsonify({"message": f"Game {game_id} and all related data deleted"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting game {game_id}: {str(e)}")
+        raise APIException(f"Error deleting game: {str(e)}", status_code=500)
 
 
 # GET all genres

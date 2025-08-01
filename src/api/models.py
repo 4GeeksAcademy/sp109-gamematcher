@@ -88,10 +88,26 @@ class GamePlatform(db.Model):
         }
 
 
+class AdminUser(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(120), unique=True, nullable=False)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email
+        }
+
+
 class GameGenre(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    game_id: Mapped[int] = mapped_column(db.ForeignKey("game.id"), nullable=False)
-    genre_id: Mapped[int] = mapped_column(db.ForeignKey("genre.id"), nullable=False)
+    game_id: Mapped[int] = mapped_column(
+        db.ForeignKey("game.id"), nullable=False)
+    genre_id: Mapped[int] = mapped_column(
+        db.ForeignKey("genre.id"), nullable=False)
 
     game = db.relationship("Game", backref="game_genres")
     genre = db.relationship("Genre", backref="genre_games")
@@ -106,24 +122,12 @@ class GameGenre(db.Model):
         }
 
 
-class AdminUser(db.Model):
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(120), nullable=False)
-    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
-
-    def serialize(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "email": self.email
-        }
-    
-# Platform-Preference
-
 class UserPlatformPreference(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(db.ForeignKey("user.id"), nullable=False)
-    platform_id: Mapped[int] = mapped_column(db.ForeignKey("platform.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        db.ForeignKey("user.id"), nullable=False)
+    platform_id: Mapped[int] = mapped_column(
+        db.ForeignKey("platform.id"), nullable=False)
 
     user = db.relationship("User", backref="platform_preferences")
     platform = db.relationship("Platform", backref="user_preferences")
@@ -136,12 +140,14 @@ class UserPlatformPreference(db.Model):
             "user_nickname": self.user.nickname,
             "platform_name": self.platform.name
         }
-    
+
 
 class UserGenrePreference(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(db.ForeignKey("user.id"), nullable=False)
-    genre_id: Mapped[int] = mapped_column(db.ForeignKey("genre.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        db.ForeignKey("user.id"), nullable=False)
+    genre_id: Mapped[int] = mapped_column(
+        db.ForeignKey("genre.id"), nullable=False)
 
     user = db.relationship("User", backref="user_genres")
     genre = db.relationship("Genre", backref="genre_users")
@@ -154,8 +160,6 @@ class UserGenrePreference(db.Model):
             "user_name": self.user.nickname,
             "genre_name": self.genre.name
         }
-
-# User-Game-favorites
 
 
 class User_Game_Favorite(db.Model):
@@ -171,10 +175,13 @@ class User_Game_Favorite(db.Model):
             "game_id": self.game_id
         }
 
+
 class NonFavoriteGame(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(db.ForeignKey('user.id'), nullable=False)
-    game_id: Mapped[int] = mapped_column(db.ForeignKey('game.id'), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        db.ForeignKey('user.id'), nullable=False)
+    game_id: Mapped[int] = mapped_column(
+        db.ForeignKey('game.id'), nullable=False)
 
     user = db.relationship('User', backref='non_favorite_games')
     game = db.relationship('Game', backref='non_favorited_by_users')
