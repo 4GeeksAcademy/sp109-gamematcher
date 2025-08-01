@@ -726,3 +726,83 @@ def admin_login():
 
     access_token = create_access_token(identity=name)
     return jsonify(access_token=access_token)
+
+
+# GET all user-genre preferences
+@api.route('/user-genre-preferences', methods=['GET'])
+def get_all_user_genre_preferences():
+    preferences = UserGenrePreference.query.all()
+    return jsonify([p.serialize() for p in preferences]), 200
+
+# GET one user-genre preference by ID
+@api.route('/user-genre-preferences/<int:id>', methods=['GET'])
+def get_user_genre_preference(id):
+    preference = UserGenrePreference.query.get(id)
+
+    if not preference:
+        return jsonify({"error": "UserGenrePreference not found"}), 404
+
+    return jsonify(preference.serialize()), 200
+
+# POST new user-genre preference
+@api.route('/user-genre-preferences', methods=['POST'])
+def create_user_genre_preference():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    genre_id = data.get("genre_id")
+
+    if not user_id or not genre_id:
+        return jsonify({"error": "user_id and genre_id are required"}), 400
+
+    user = User.query.get(user_id)
+    genre = Genre.query.get(genre_id)
+
+    if not user or not genre:
+        return jsonify({"error": "Invalid user_id or genre_id"}), 404
+
+    new_preference = UserGenrePreference(user_id=user_id, genre_id=genre_id)
+    db.session.add(new_preference)
+    db.session.commit()
+
+    return jsonify(new_preference.serialize()), 201
+
+# PUT update user-genre preference
+@api.route('/user-genre-preferences/<int:id>', methods=['PUT'])
+def update_user_genre_preference(id):
+    data = request.get_json()
+    preference = UserGenrePreference.query.get(id)
+
+    if not preference:
+        return jsonify({"error": "UserGenrePreference not found"}), 404
+
+    user_id = data.get("user_id")
+    genre_id = data.get("genre_id")
+
+    if user_id:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "Invalid user_id"}), 404
+        preference.user_id = user_id
+
+    if genre_id:
+        genre = Genre.query.get(genre_id)
+        if not genre:
+            return jsonify({"error": "Invalid genre_id"}), 404
+        preference.genre_id = genre_id
+
+    db.session.commit()
+    return jsonify(preference.serialize()), 200
+
+# DELETE a user-genre preference
+@api.route('/user-genre-preferences/<int:id>', methods=['DELETE'])
+def delete_user_genre_preference(id):
+    relation = UserGenrePreference.query.get(id)
+
+    if not relation:
+        return jsonify({"error": "UserGenrePreference not found"}), 404
+
+    db.session.delete(relation)
+    db.session.commit()
+
+    return jsonify({"message": f"Deleted UserGenrePreference with id {id}"}), 200
+
