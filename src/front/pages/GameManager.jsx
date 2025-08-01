@@ -39,8 +39,26 @@ export const GameManager = () => {
   };
 
   const handleDelete = async (id) => {
-    const res = await fetch(`${backendUrl}/api/games/${id}`, { method: "DELETE" });
-    if (res.ok) loadGames();
+    try {
+      const res = await fetch(`${backendUrl}/api/games/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (res.ok) {
+        console.log("Juego eliminado correctamente");
+        loadGames();
+      } else {
+        const error = await res.json();
+        console.error("Error del servidor:", error);
+        alert("Error al eliminar juego: " + error.message);
+      }
+    } catch (err) {
+      console.error("Error de conexión:", err);
+      alert("Error de conexión con el servidor. ¿Está el backend corriendo?");
+    }
   };
 
   const handleEdit = (game) => {
