@@ -711,6 +711,7 @@ def get_all_non_favorites():
     relations = NonFavoriteGame.query.all()
     return jsonify([r.serialize() for r in relations]), 200
 
+
 @api.route("/admin-login", methods=["POST"])
 def admin_login():
     name = request.json.get("name", None)
@@ -725,4 +726,4 @@ def admin_login():
         return jsonify({"msg": "Bad name or password"}), 401
 
     access_token = create_access_token(identity=name)
-    return jsonify(access_token=access_token)
+    return jsonify(access_token=access_token), 200
