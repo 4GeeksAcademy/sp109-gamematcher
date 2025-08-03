@@ -16,7 +16,7 @@ from sqlalchemy import select
 api = Blueprint('api', __name__)
 
 # Allow CORS requests to this API
-CORS(api, 
+CORS(api,
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'],
      origins=['*'])
@@ -116,27 +116,27 @@ def delete_game(game_id):
 
     try:
         # Eliminar todas las relaciones del juego antes de eliminarlo
-        
+
         # Eliminar relaciones game-platform
         GamePlatform.query.filter_by(game_id=game_id).delete()
-        
+
         # Eliminar relaciones game-genre
         GameGenre.query.filter_by(game_id=game_id).delete()
-        
+
         # Eliminar favoritos
         favorites = UserGameFavorite.query.filter_by(game_id=game_id).all()
         for fav in favorites:
             db.session.delete(fav)
-        
+
         # Eliminar no favoritos
         NonFavoriteGame.query.filter_by(game_id=game_id).delete()
-        
+
         # Eliminar el juego
         db.session.delete(game)
         db.session.commit()
-        
+
         return jsonify({"message": f"Game {game_id} and all related data deleted"}), 200
-        
+
     except Exception as e:
         db.session.rollback()
         print(f"Error deleting game {game_id}: {str(e)}")
@@ -348,7 +348,8 @@ def delete_user(user_id):
         UserGenrePreference.query.filter_by(user_id=user_id).delete()
 
         # Eliminar favoritos del usuario
-        user_favorites = UserGameFavorite.query.filter_by(user_id=user_id).all()
+        user_favorites = UserGameFavorite.query.filter_by(
+            user_id=user_id).all()
         for fav in user_favorites:
             db.session.delete(fav)
 
@@ -747,16 +748,35 @@ def admin_login():
     name = request.json.get("name", None)
     password = request.json.get("password", None)
 
-    adminUser = db.session.execute(select(AdminUser).where(AdminUser.name == name)).scalar_one_or_none()
+    adminUser = db.session.execute(select(AdminUser).where(
+        AdminUser.name == name)).scalar_one_or_none()
 
     if adminUser is None:
-        return jsonify({"msg": "Bad name or password"}), 401
+        return jsonify({"msg": "Nombre o contraseña incorrectos"}), 401
 
     if password != adminUser.password:
-        return jsonify({"msg": "Bad name or password"}), 401
+        return jsonify({"msg": "Nombre o contraseña incorrectos"}), 401
 
     access_token = create_access_token(identity=name)
-    return jsonify(access_token=access_token), 200
+    return jsonify(access_token=access_token, user_type="admin"), 200
+
+
+@api.route("/user-login", methods=["POST"])
+def user_login():
+    nickname = request.json.get("nickname", None)
+    password = request.json.get("password", None)
+
+    user = db.session.execute(select(User).where(
+        User.nickname == nickname)).scalar_one_or_none()
+
+    if user is None:
+        return jsonify({"msg": "Nickname o contraseña incorrectos"}), 401
+
+    if password != user.password:
+        return jsonify({"msg": "Nickname o contraseña incorrectos"}), 401
+
+    access_token = create_access_token(identity=nickname)
+    return jsonify(access_token=access_token, user_type="user"), 200
 
 
 # GET all user-genre preferences
@@ -766,6 +786,8 @@ def get_all_user_genre_preferences():
     return jsonify([p.serialize() for p in preferences]), 200
 
 # GET one user-genre preference by ID
+
+
 @api.route('/user-genre-preferences/<int:id>', methods=['GET'])
 def get_user_genre_preference(id):
     preference = UserGenrePreference.query.get(id)
@@ -776,6 +798,8 @@ def get_user_genre_preference(id):
     return jsonify(preference.serialize()), 200
 
 # POST new user-genre preference
+
+
 @api.route('/user-genre-preferences', methods=['POST'])
 def create_user_genre_preference():
     data = request.get_json()
@@ -798,6 +822,8 @@ def create_user_genre_preference():
     return jsonify(new_preference.serialize()), 201
 
 # PUT update user-genre preference
+
+
 @api.route('/user-genre-preferences/<int:id>', methods=['PUT'])
 def update_user_genre_preference(id):
     data = request.get_json()
@@ -825,6 +851,8 @@ def update_user_genre_preference(id):
     return jsonify(preference.serialize()), 200
 
 # DELETE a user-genre preference
+
+
 @api.route('/user-genre-preferences/<int:id>', methods=['DELETE'])
 def delete_user_genre_preference(id):
     relation = UserGenrePreference.query.get(id)
@@ -837,3 +865,26 @@ def delete_user_genre_preference(id):
 
     return jsonify({"message": f"Deleted UserGenrePreference with id {id}"}), 200
 
+
+# Endpoint temporal para crear admin users - SOLO PARA DESARROLLO
+@api.route("/create-admin", methods=["POST"])
+def create_admin():
+    email = request.json.get("email", None)
+    password = request.json.get("password", None)
+    name = request.json.get("name", None)
+
+    if not email or not password or not name:
+        return jsonify({"msg": "Email, password y name son requeridos"}), 400
+
+    # Verificar si ya existe
+    existing_admin = db.session.execute(select(AdminUser).where(
+        AdminUser.email == email)).scalar_one_or_none()
+    if existing_admin:
+        return jsonify({"msg": "El email ya está registrado"}), 400
+
+    # Crear nuevo admin
+    new_admin = AdminUser(email=email, password=password, name=name)
+    db.session.add(new_admin)
+    db.session.commit()
+
+    return jsonify({"msg": "Admin creado exitosamente", "email": email}), 201

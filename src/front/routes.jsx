@@ -20,6 +20,9 @@ import NonFavoriteGameList from './components/NonFavoriteGameList';
 import { RawgGameList } from "./pages/RawgGameList";
 import { RawgGameDetail } from "./pages/RawgGameDetail";
 import AdminLoginForm from "./components/AdminLoginForm";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import Unauthorized from "./pages/Unauthorized";
+import Login from "./pages/Login";
 
 
 
@@ -30,17 +33,41 @@ export const router = createBrowserRouter(
       <Route path="/games" element={<GameManager />} />
       <Route path="/platforms" element={<Platforms />} />
       <Route path="/genres" element={<Genres />} />
-      <Route path="/users" element={<Users />} />
-      <Route path="/game-platforms" element={<GamePlatformList />} />
-      <Route path="/game-genres" element={<GameGenreList />} />
-      <Route path="/user-platform-preferences" element={<UserPlatformPreferenceList />} />
-      <Route path="/admins" element={<AdminManager />} />
-      <Route path="/user-genre-preferences" element={<UserGenrePreferenceList />} />
-      <Route path="/user-game-favorites" element={<UserGameFavoriteManager />} />
-      <Route path="/users/non-favorites" element={<NonFavoriteGameList />} />
+
+      {/* Rutas protegidas - solo usuarios autenticados */}
+      <Route path="/users" element={
+        <ProtectedRoute element={Users} roles={["admin"]} />
+      } />
+      <Route path="/admins" element={
+        <ProtectedRoute element={AdminManager} roles={["admin"]} />
+      } />
+      <Route path="/user-game-favorites" element={
+        <ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />
+      } />
+
+      {/* Rutas administrativas - solo admins */}
+      <Route path="/game-platforms" element={
+        <ProtectedRoute element={GamePlatformList} roles={["admin"]} />
+      } />
+      <Route path="/game-genres" element={
+        <ProtectedRoute element={GameGenreList} roles={["admin"]} />
+      } />
+      <Route path="/user-platform-preferences" element={
+        <ProtectedRoute element={UserPlatformPreferenceList} roles={["admin"]} />
+      } />
+      <Route path="/user-genre-preferences" element={
+        <ProtectedRoute element={UserGenrePreferenceList} roles={["admin"]} />
+      } />
+      <Route path="/users/non-favorites" element={
+        <ProtectedRoute element={NonFavoriteGameList} roles={["admin"]} />
+      } />
+
+      {/* Rutas públicas */}
       <Route path="/rawg" element={<RawgGameList />} />
       <Route path="/rawg-games/:id" element={<RawgGameDetail />} />
+      <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLoginForm />} />
+      <Route path="/unauthorized" element={<Unauthorized />} />
     </Route>
   )
 );
