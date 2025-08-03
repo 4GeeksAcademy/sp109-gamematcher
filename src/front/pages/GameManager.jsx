@@ -52,7 +52,7 @@ export const GameManager = () => {
 
     const payload = {
       name: game.name,
-      description: game.slug, // Simplificamos, solo guardamos el slug
+      description: game.slug,
     };
 
     const res = await fetch(`${backendUrl}/api/games`, {
