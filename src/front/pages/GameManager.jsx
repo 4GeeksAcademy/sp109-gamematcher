@@ -44,28 +44,40 @@ export const GameManager = () => {
   }, [searchTerm]);
 
   const handleAddGame = async (game) => {
-    const alreadyExists = store.games.some((g) => g.name.toLowerCase() === game.name.toLowerCase());
-    if (alreadyExists) {
-      alert("Este juego ya existe en tu base de datos.");
+    if (!game.id || !game.name) {
+      alert("Datos del juego incompletos.");
       return;
     }
 
-    const payload = {
-      name: game.name,
-      description: game.slug,
-    };
+    try {
+      // Obtener detalles completos del juego desde RAWG
+      const detailRes = await fetch(`https://api.rawg.io/api/games/${game.id}?key=${rawgApiKey}`);
+      const gameDetail = await detailRes.json();
 
-    const res = await fetch(`${backendUrl}/api/games`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const payload = {
+        name: game.name,
+        description: gameDetail.description_raw || gameDetail.description || "Sin descripción disponible",
+        background_image: game.background_image,
+        released: game.released,
+        rating: game.rating,
+        rawg_id: game.id  // Guardar el ID original de RAWG
+      };
 
-    if (res.ok) {
-      loadGames();
-      alert("Juego añadido correctamente.");
-    } else {
-      alert("Error al añadir juego.");
+      const res = await fetch(`${backendUrl}/api/games`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        loadGames();
+        alert("Juego añadido correctamente.");
+      } else {
+        alert("Error al añadir juego.");
+      }
+    } catch (err) {
+      console.error("Error al obtener detalles del juego:", err);
+      alert("Error al obtener detalles del juego.");
     }
   };
 

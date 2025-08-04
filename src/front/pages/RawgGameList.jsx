@@ -4,16 +4,16 @@ import useGlobalReducer from "../hooks/useGlobalReducer";
 
 export const RawgGameList = () => {
   const { store, dispatch } = useGlobalReducer();
-  const apiKey = import.meta.env.VITE_RAWG_API_KEY;
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const fetchGames = async () => {
     try {
-      // page_size=18 muestra el numero de jueguitos que se ven
-      const res = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&page_size=18`);
+      // Obtener juegos de la base de datos local
+      const res = await fetch(`${backendUrl}/api/games`);
       const data = await res.json();
-      dispatch({ type: "set_rawg_games", payload: data.results });
+      dispatch({ type: "set_games", payload: data });
     } catch (err) {
-      console.error("Error fetching RAWG games:", err);
+      console.error("Error fetching games from database:", err);
     }
   };
 
@@ -23,9 +23,9 @@ export const RawgGameList = () => {
 
   return (
     <div className="container py-4">
-      <h2 className="mb-4">Juegos populares</h2>
+      <h2 className="mb-4">Biblioteca de Juegos</h2>
 
-      {!store.rawgGames || store.rawgGames.length === 0 ? (
+      {!store.games || store.games.length === 0 ? (
         <div className="text-center py-4">
           <div className="spinner-border" role="status">
             <span className="visually-hidden">Cargando juegos...</span>
@@ -34,36 +34,56 @@ export const RawgGameList = () => {
         </div>
       ) : (
         <div className="row g-4">
-          {store.rawgGames.map((game) => (
+          {store.games.map((game) => (
             <div key={game.id} className="col-md-6 col-lg-4 col-xl-3">
-              <Link
-                to={`/rawg-games/${game.id}`}
-                className="text-decoration-none text-dark"
-              >
-                <div className="card h-100 shadow-sm">
-                  <img
-                    src={game.background_image}
-                    alt={game.name}
+              <div className="card h-100 shadow-sm">
+                <Link to={`/rawg-games/${game.id}`} className="text-decoration-none">
+                  <div
                     className="card-img-top"
-                    style={{ height: "200px", objectFit: "cover" }}
-                  />
+                    style={{
+                      height: "200px",
+                      backgroundImage: game.background_image
+                        ? `url(${game.background_image})`
+                        : 'none',
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      backgroundRepeat: "no-repeat"
+                    }}
+                  >
+                    {!game.background_image && (
+                      <div className="d-flex align-items-center justify-content-center h-100 bg-light">
+                        <i className="fa-solid fa-gamepad fa-3x text-muted"></i>
+                      </div>
+                    )}
+                  </div>
                   <div className="card-body d-flex flex-column">
-                    <h5 className="card-title">{game.name}</h5>
+                    <h5 className="card-title text-dark">{game.name}</h5>
                     <div className="mt-auto">
-                      <p className="card-text text-muted small mb-1">
-                        <i className="fa-regular fa-calendar me-1"></i>
-                        {game.released || "Fecha no disponible"}
-                      </p>
                       {game.rating && (
-                        <p className="card-text text-muted small mb-0">
-                          <i className="fa-solid fa-star text-warning me-1"></i>
-                          {game.rating}/5
+                        <div className="mb-2">
+                          <span className="badge bg-warning text-dark">
+                            <i className="fa-solid fa-star me-1"></i>
+                            {game.rating}/5
+                          </span>
+                        </div>
+                      )}
+                      {game.released && (
+                        <p className="card-text text-muted small mb-1">
+                          <i className="fa-solid fa-calendar me-1"></i>
+                          {game.released}
+                        </p>
+                      )}
+                      {game.description && (
+                        <p className="card-text text-muted small">
+                          {game.description.length > 100
+                            ? `${game.description.substring(0, 100)}...`
+                            : game.description}
                         </p>
                       )}
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             </div>
           ))}
         </div>

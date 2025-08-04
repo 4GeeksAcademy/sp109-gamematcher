@@ -18,7 +18,7 @@ class User(db.Model):
         return {
             "id": self.id,
             "nickname": self.nickname,
-            "email": self.email,
+            "email": self.email
         }
 
 # Games
@@ -28,12 +28,20 @@ class Game(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
+    background_image: Mapped[str] = mapped_column(String(500), nullable=True)
+    released: Mapped[str] = mapped_column(String(20), nullable=True)
+    rating: Mapped[float] = mapped_column(nullable=True)
+    rawg_id: Mapped[int] = mapped_column(nullable=True)  # ID original de RAWG
 
     def serialize(self):
         return {
             "id": self.id,
             "name": self.name,
-            "description": self.description
+            "description": self.description,
+            "background_image": self.background_image,
+            "released": self.released,
+            "rating": self.rating,
+            "rawg_id": self.rawg_id
         }
 
 # Genres

@@ -68,13 +68,21 @@ def create_game():
         new_game = Game(
             id=data["id"],
             name=data["name"],
-            description=data.get("description")
+            description=data.get("description"),
+            background_image=data.get("background_image"),
+            released=data.get("released"),
+            rating=data.get("rating"),
+            rawg_id=data.get("rawg_id")
         )
     else:
         # Crear juego con ID auto-generado
         new_game = Game(
             name=data["name"],
-            description=data.get("description")
+            description=data.get("description"),
+            background_image=data.get("background_image"),
+            released=data.get("released"),
+            rating=data.get("rating"),
+            rawg_id=data.get("rawg_id")
         )
 
     db.session.add(new_game)
