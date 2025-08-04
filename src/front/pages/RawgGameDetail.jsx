@@ -1,21 +1,33 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 export const RawgGameDetail = () => {
   //Utilizamos useParams para obtener el ID del juego de la URL
   const { id } = useParams();
-  const apiKey = import.meta.env.VITE_RAWG_API_KEY;
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const [game, setGame] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user, isAuthenticated } = useAuth();
 
   const fetchGameDetail = async () => {
     try {
-      const res = await fetch(
-        `https://api.rawg.io/api/games/${id}?key=${apiKey}`
-      );
+      setLoading(true);
+      // Obtener detalles del juego desde la base de datos local
+      const res = await fetch(`${backendUrl}/api/games/${id}`);
+
+      if (!res.ok) {
+        throw new Error('Juego no encontrado');
+      }
+
       const data = await res.json();
       setGame(data);
     } catch (err) {
-      console.error("Error fetching RAWG game detail:", err);
+      console.error("Error fetching game detail:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -23,7 +35,7 @@ export const RawgGameDetail = () => {
     fetchGameDetail();
   }, [id]);
 
-  if (!game)
+  if (loading) {
     return (
       <div className="container py-4">
         <div className="text-center">
@@ -34,35 +46,47 @@ export const RawgGameDetail = () => {
         </div>
       </div>
     );
+  }
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  if (error || !game) {
+    return (
+      <div className="container py-4">
+        <div className="text-center">
+          <h3 className="text-danger">Error al cargar el juego</h3>
+          <p className="text-muted">{error || 'Juego no encontrado'}</p>
+          <Link to="/rawg" className="btn btn-primary">
+            <i className="fa-solid fa-arrow-left me-2"></i>
+            Volver a la lista
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddFavorite = async () => {
+    // Verificar si el usuario está autenticado
+    if (!isAuthenticated || !user) {
+      alert("❌ Debes iniciar sesión para añadir juegos a favoritos.");
+      return;
+    }
+
+    // Solo usuarios regulares pueden añadir favoritos (no admins)
+    if (user.role !== "user") {
+      alert("❌ Solo los usuarios pueden añadir juegos a favoritos.");
+      return;
+    }
+
     try {
-      const gameData = {
-        id: game.id,
-        name: game.name,
-        description: game.description_raw || "Sin descripción"
-      };
-
-      const gameResponse = await fetch(`${backendUrl}/api/games`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(gameData),
-      });
-
-      if (!gameResponse.ok) {
-        const gameError = await gameResponse.json();
-        console.error("Error creating game:", gameError);
-        alert("Error al procesar el juego: " + gameError.message);
-        return;
-      }
+      const token = sessionStorage.getItem("access_token");
 
       const favResponse = await fetch(`${backendUrl}/api/favorites`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
-          user_id: 1,
+          user_id: user.id,
           game_id: game.id,
         }),
       });
@@ -80,16 +104,22 @@ export const RawgGameDetail = () => {
     }
   };
 
-
   return (
     <div className="container py-4">
       <div className="row">
         <div className="col-md-4 mb-4">
-          <img
-            src={game.background_image}
-            alt={game.name}
-            className="img-fluid rounded shadow"
-          />
+          {game.background_image ? (
+            <img
+              src={game.background_image}
+              alt={game.name}
+              className="img-fluid rounded shadow"
+            />
+          ) : (
+            <div className="bg-light rounded shadow d-flex align-items-center justify-content-center"
+              style={{ height: "300px" }}>
+              <i className="fa-solid fa-gamepad fa-4x text-muted"></i>
+            </div>
+          )}
         </div>
         <div className="col-md-8">
           <Link to="/rawg" className="btn btn-outline-secondary btn-sm">
@@ -100,10 +130,12 @@ export const RawgGameDetail = () => {
           <h1 className="mb-3">{game.name}</h1>
 
           <div className="mb-3">
-            <span className="badge bg-primary me-2">
-              <i className="fa-regular fa-calendar me-1"></i>
-              {game.released || "Fecha no disponible"}
-            </span>
+            {game.released && (
+              <span className="badge bg-primary me-2">
+                <i className="fa-regular fa-calendar me-1"></i>
+                {game.released}
+              </span>
+            )}
             {game.rating && (
               <span className="badge bg-warning text-dark">
                 <i className="fa-solid fa-star me-1"></i>
@@ -112,33 +144,39 @@ export const RawgGameDetail = () => {
             )}
           </div>
 
-          {game.genres && game.genres.length > 0 && (
-            <div className="mb-3">
-              <strong>Géneros:</strong>
-              <div className="mt-1">
-                {game.genres.map((genre) => (
-                  <span key={genre.id} className="badge bg-secondary me-1">
-                    {genre.name}
-                  </span>
-                ))}
-              </div>
+          {/* Solo mostrar botón de favoritos si el usuario está autenticado y es un usuario regular */}
+          {isAuthenticated && user && user.role === "user" && (
+            <button
+              className="btn btn-sm btn-outline-danger mb-3"
+              onClick={handleAddFavorite}
+            >
+              <i className="fa-solid fa-heart me-2"></i>
+              Añadir a favoritos
+            </button>
+          )}
+
+          {/* Mensaje para usuarios no autenticados */}
+          {!isAuthenticated && (
+            <div className="alert alert-info mb-3">
+              <i className="fa-solid fa-info-circle me-2"></i>
+              <Link to="/login" className="alert-link">Inicia sesión</Link> para añadir juegos a favoritos
+            </div>
+          )}
+
+          {/* Mensaje para admins */}
+          {isAuthenticated && user && user.role === "admin" && (
+            <div className="alert alert-warning mb-3">
+              <i className="fa-solid fa-user-shield me-2"></i>
+              Los administradores no pueden añadir favoritos
             </div>
           )}
 
           {game.description && (
             <div className="mt-4">
-              <button
-                className="btn btn-sm btn-outline-danger mb-3"
-                onClick={handleAddFavorite}
-              >
-                <i className="fa-solid fa-heart me-2"></i>
-                Añadir a favoritos
-              </button>
               <h5>Descripción:</h5>
-              <div
-                className="border p-3 rounded bg-light"
-                dangerouslySetInnerHTML={{ __html: game.description }}
-              />
+              <div className="border p-3 rounded bg-light">
+                <p className="mb-0">{game.description}</p>
+              </div>
             </div>
           )}
         </div>
