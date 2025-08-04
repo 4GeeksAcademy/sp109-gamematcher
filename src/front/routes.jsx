@@ -24,17 +24,21 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Login from "./pages/Login";
 
-
-
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<Layout />} errorElement={<h1>Not found!</h1>} >
       <Route path="/" element={<Home />} />
-      <Route path="/games" element={<GameManager />} />
-      <Route path="/platforms" element={<Platforms />} />
-      <Route path="/genres" element={<Genres />} />
 
-      {/* Rutas protegidas - solo usuarios autenticados */}
+      {/* Rutas protegidas - solo admins */}
+      <Route path="/games" element={
+        <ProtectedRoute element={GameManager} roles={["admin"]} />
+      } />
+      <Route path="/platforms" element={
+        <ProtectedRoute element={Platforms} roles={["admin"]} />
+      } />
+      <Route path="/genres" element={
+        <ProtectedRoute element={Genres} roles={["admin"]} />
+      } />
       <Route path="/users" element={
         <ProtectedRoute element={Users} roles={["admin"]} />
       } />
@@ -44,8 +48,6 @@ export const router = createBrowserRouter(
       <Route path="/user-game-favorites" element={
         <ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />
       } />
-
-      {/* Rutas administrativas - solo admins */}
       <Route path="/game-platforms" element={
         <ProtectedRoute element={GamePlatformList} roles={["admin"]} />
       } />
