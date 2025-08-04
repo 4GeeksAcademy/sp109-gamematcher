@@ -40,15 +40,14 @@ export const Users = () => {
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`${backendUrl}/api/users/${id}`, { 
+      const res = await fetch(`${backendUrl}/api/users/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
       });
-      
+
       if (res.ok) {
-        console.log("Usuario eliminado correctamente");
         loadUsers();
       } else {
         const error = await res.json();
@@ -65,7 +64,7 @@ export const Users = () => {
     setForm({
       nickname: user.nickname,
       email: user.email,
-      password: user.password,
+      password: "", // No precargar la contraseña por seguridad
     });
     setEditingId(user.id);
   };
@@ -91,7 +90,7 @@ export const Users = () => {
           required
         />
         <input
-          type="text"
+          type="password"
           className="form-control my-2"
           placeholder="Password"
           value={form.password}
@@ -109,7 +108,7 @@ export const Users = () => {
             <div>
               <strong>{user.nickname}</strong>
               <p className="mb-1"><strong>Email:</strong> {user.email}</p>
-              <p className="mb-0"><strong>Password:</strong> {user.password}</p>
+              <p className="mb-0"><strong>ID:</strong> {user.id}</p>
             </div>
             <div className="d-flex flex-column gap-2 mb-2">
               <button

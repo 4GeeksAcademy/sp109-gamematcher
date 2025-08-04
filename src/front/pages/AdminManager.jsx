@@ -76,7 +76,7 @@ export const AdminManager = () => {
   };
 
   const handleEdit = (admin) => {
-    setForm({ name: admin.name, email: admin.email, password: admin.password });
+    setForm({ name: admin.name, email: admin.email, password: "" }); // No precargar contraseña
     setEditingId(admin.id);
   };
 
