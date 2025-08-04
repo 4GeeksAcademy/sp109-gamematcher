@@ -16,21 +16,12 @@ export const Navbar = () => {
           <span className="navbar-brand mb-0 h1">Game Matcher</span>
         </Link>
         <div className="ml-auto">
-          {/* Rutas públicas - siempre visibles */}
-          <Link to="/games">
-            <button className="btn btn-outline-primary m-1">Games</button>
-          </Link>
-          <Link to="/genres">
-            <button className="btn btn-outline-primary m-1">Genres</button>
-          </Link>
-          <Link to="/platforms">
-            <button className="btn btn-outline-primary m-1">Platforms</button>
-          </Link>
+          {/* Ruta pública visible siempre */}
           <Link to="/rawg">
             <button className="btn btn-outline-primary m-1">RAWG List</button>
           </Link>
 
-          {/* Rutas para usuarios autenticados */}
+          {/* Ruta para usuarios autenticados */}
           {isAuthenticated && (
             <Link to="/user-game-favorites">
               <button className="btn btn-outline-primary m-1">Mis Favoritos</button>
@@ -40,6 +31,15 @@ export const Navbar = () => {
           {/* Rutas solo para administradores */}
           {isAuthenticated && user?.role === "admin" && (
             <>
+              <Link to="/games">
+                <button className="btn btn-outline-primary m-1">Games</button>
+              </Link>
+              <Link to="/genres">
+                <button className="btn btn-outline-primary m-1">Genres</button>
+              </Link>
+              <Link to="/platforms">
+                <button className="btn btn-outline-primary m-1">Platforms</button>
+              </Link>
               <Link to="/users">
                 <button className="btn btn-outline-warning m-1">Users</button>
               </Link>
@@ -88,3 +88,4 @@ export const Navbar = () => {
     </nav>
   );
 };
+
