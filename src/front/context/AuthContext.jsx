@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 
-
-
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -14,17 +12,39 @@ export const AuthProvider = ({ children }) => {
 
   // Verificar si hay sesión activa al cargar
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    if (token) {
-      // Como no tenemos endpoint /me, recuperamos datos básicos
-      const userData = {
-        email: "admin",
-        role: "admin",
-        name: "admin"
-      };
-      setUser(userData);
-      setIsAuthenticated(true);
-    }
+    const verifyToken = async () => {
+      const token = sessionStorage.getItem("token");
+      if (token) {
+        try {
+          // Verificar token con el backend
+          const res = await fetch(`${API_URL}/api/verify-token`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          });
+
+          if (res.ok) {
+            const userData = await res.json();
+            setUser(userData);
+            setIsAuthenticated(true);
+          } else {
+            // Token inválido, limpiar sesión
+            sessionStorage.removeItem("token");
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        } catch (error) {
+          console.error("Error verificando token:", error);
+          sessionStorage.removeItem("token");
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      }
+    };
+
+    verifyToken();
   }, []);
 
   const loginUser = async (nickname, password) => {
@@ -39,16 +59,26 @@ export const AuthProvider = ({ children }) => {
       const data = await res.json();
       sessionStorage.setItem("token", data.access_token);
 
-      const userData = {
-        name: nickname,
-        email: `${nickname}@user.com`,  // Email simulado
-        role: "user"  // Usuario normal
-      };
-      setUser(userData);
-      setIsAuthenticated(true);
-      navigate("/");
+      // Obtener datos reales del usuario usando el token
+      const verifyRes = await fetch(`${API_URL}/api/verify-token`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${data.access_token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (verifyRes.ok) {
+        const userData = await verifyRes.json();
+        setUser(userData);
+        setIsAuthenticated(true);
+        navigate("/");
+      } else {
+        throw new Error("Error obteniendo datos del usuario");
+      }
     } catch (err) {
       console.error("Login error:", err);
+      sessionStorage.removeItem("token");
       throw err;
     }
   };
@@ -65,22 +95,31 @@ export const AuthProvider = ({ children }) => {
       const data = await res.json();
       sessionStorage.setItem("token", data.access_token);
 
-      const userData = {
-        name: username,
-        email: `${username}@admin.com`,  // Email simulado
-        role: "admin"  // Administrador
-      };
-      setUser(userData);
-      setIsAuthenticated(true);
-      navigate("/");
+      // Obtener datos reales del admin usando el token
+      const verifyRes = await fetch(`${API_URL}/api/verify-token`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${data.access_token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (verifyRes.ok) {
+        const userData = await verifyRes.json();
+        setUser(userData);
+        setIsAuthenticated(true);
+        navigate("/");
+      } else {
+        throw new Error("Error obteniendo datos del administrador");
+      }
     } catch (err) {
       console.error("Login error:", err);
+      sessionStorage.removeItem("token");
       throw err;
     }
   };
 
-  // Función legacy - mantener compatibilidad
-  const login = loginAdmin; const logout = () => {
+  const logout = () => {
     sessionStorage.removeItem("token");
     setUser(null);
     setIsAuthenticated(false);
@@ -88,7 +127,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, loginUser, loginAdmin, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, loginUser, loginAdmin, logout }}>
       {children}
     </AuthContext.Provider>
   );

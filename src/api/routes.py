@@ -139,7 +139,7 @@ def delete_game(game_id):
 
     except Exception as e:
         db.session.rollback()
-        print(f"Error deleting game {game_id}: {str(e)}")
+        # Log del error para debugging interno
         raise APIException(f"Error deleting game: {str(e)}", status_code=500)
 
 
@@ -362,7 +362,7 @@ def delete_user(user_id):
 
     except Exception as e:
         db.session.rollback()
-        print(f"Error deleting user {user_id}: {str(e)}")
+        # Log del error para debugging interno
         raise APIException(f"Error deleting user: {str(e)}", status_code=500)
 
 
@@ -504,7 +504,6 @@ def get_all_game_genres():
 @api.route('/game-genres', methods=['POST'])
 def create_game_genre():
     data = request.get_json()
-    print("Dades rebudes al POST:", data)
 
     game_id = int(data.get("game_id"))
     genre_id = int(data.get("genre_id"))
@@ -514,9 +513,6 @@ def create_game_genre():
 
     game = Game.query.get(game_id)
     genre = Genre.query.get(genre_id)
-
-    print("Game:", game)
-    print("Genre:", genre)
 
     if not game or not genre:
         return jsonify({"error": "Invalid game_id or genre_id"}), 404
@@ -888,3 +884,37 @@ def create_admin():
     db.session.commit()
 
     return jsonify({"msg": "Admin creado exitosamente", "email": email}), 201
+
+
+@api.route("/verify-token", methods=["GET"])
+@jwt_required()
+def verify_token():
+    """Verifica si el token JWT es válido y retorna la información del usuario"""
+    current_user_identity = get_jwt_identity()
+
+    # Buscar primero en AdminUser
+    admin_user = db.session.execute(select(AdminUser).where(
+        AdminUser.name == current_user_identity)).scalar_one_or_none()
+
+    if admin_user:
+        return jsonify({
+            "id": admin_user.id,
+            "name": admin_user.name,
+            "email": admin_user.email,
+            "role": "admin"
+        }), 200
+
+    # Si no es admin, buscar en User
+    user = db.session.execute(select(User).where(
+        User.nickname == current_user_identity)).scalar_one_or_none()
+
+    if user:
+        return jsonify({
+            "id": user.id,
+            "name": user.nickname,
+            "email": user.email,
+            "role": "user"
+        }), 200
+
+    # Si no se encuentra el usuario, el token es inválido
+    return jsonify({"msg": "Token inválido o usuario no encontrado"}), 401
