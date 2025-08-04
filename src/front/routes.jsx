@@ -45,23 +45,25 @@ export const router = createBrowserRouter(
       <Route path="/admins" element={
         <ProtectedRoute element={AdminManager} roles={["admin"]} />
       } />
-      <Route path="/user-game-favorites" element={
-        <ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />
-      } />
       <Route path="/game-platforms" element={
         <ProtectedRoute element={GamePlatformList} roles={["admin"]} />
       } />
       <Route path="/game-genres" element={
         <ProtectedRoute element={GameGenreList} roles={["admin"]} />
       } />
+
+      {/* Rutas accesibles por admin y user */}
+      <Route path="/user-game-favorites" element={
+        <ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />
+      } />
       <Route path="/user-platform-preferences" element={
-        <ProtectedRoute element={UserPlatformPreferenceList} roles={["admin"]} />
+        <ProtectedRoute element={UserPlatformPreferenceList} roles={["user", "admin"]} />
       } />
       <Route path="/user-genre-preferences" element={
-        <ProtectedRoute element={UserGenrePreferenceList} roles={["admin"]} />
+        <ProtectedRoute element={UserGenrePreferenceList} roles={["user", "admin"]} />
       } />
       <Route path="/users/non-favorites" element={
-        <ProtectedRoute element={NonFavoriteGameList} roles={["admin"]} />
+        <ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />
       } />
 
       {/* Rutas públicas */}
