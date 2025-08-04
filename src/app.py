@@ -36,10 +36,11 @@ db.init_app(app)
 setup_admin(app)
 
 # add the admin
-setup_commands(app)
+# setup_commands(app)  # Comentado: función no disponible
 
 # Setup the Flask-JWT-Extended extension
-app.config["JWT_SECRET_KEY"] = "super-secret que debe ser algo muy largo"  # Change this!
+# Change this!
+app.config["JWT_SECRET_KEY"] = "super-secret que debe ser algo muy largo"
 jwt = JWTManager(app)
 
 # Add all endpoints form the API with a "api" prefix
