@@ -1,16 +1,25 @@
 import React, { useEffect, useState } from "react";
 import useGlobalReducer from "../hooks/useGlobalReducer";
+import { useAuth } from "../context/AuthContext";
 
 const UserGenrePreferenceList = () => {
   const { store, dispatch } = useGlobalReducer();
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const [formData, setFormData] = useState({ user_id: "", genre_id: "" });
 
+  const { user } = useAuth();
+
   useEffect(() => {
     fetchAssociations();
     fetchUsers();
     fetchGenres();
   }, []);
+
+  useEffect(() => {
+    if (user?.role !== "admin" && user?.id) {
+      setFormData((form) => ({ ...form, user_id: user.id }));
+    }
+  }, [user]);
 
   const fetchAssociations = async () => {
     const res = await fetch(`${backendUrl}/api/user-genre-preferences`);
@@ -58,7 +67,7 @@ const UserGenrePreferenceList = () => {
         type: "set_userGenrePreferences",
         payload: [...store.userGenrePreferences, newAssoc],
       });
-      setFormData({ user_id: "", genre_id: "" });
+      setFormData({ user_id: user?.role !== "admin" ? user.id : "", genre_id: "" });
     }
   };
 
@@ -68,18 +77,39 @@ const UserGenrePreferenceList = () => {
 
       <form className="row g-2 mb-4" onSubmit={handleSubmit}>
         <div className="col-md-5">
-          <select name="user_id" className="form-select" value={formData.user_id} onChange={handleChange} required>
-            <option value="">Select a user</option>
-            {store.users?.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.nickname}
-              </option>
-            ))}
-          </select>
+          {user?.role !== "admin" ? (
+            <>
+              <div className="form-control my-2 bg-light">
+                {user.name}
+              </div>
+              <input type="hidden" name="user_id" value={user.id} />
+            </>
+          ) : (
+            <select
+              name="user_id"
+              className="form-select"
+              value={formData.user_id}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a user</option>
+              {store.users?.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nickname || u.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="col-md-5">
-          <select name="genre_id" className="form-select" value={formData.genre_id} onChange={handleChange} required>
+          <select
+            name="genre_id"
+            className="form-select"
+            value={formData.genre_id}
+            onChange={handleChange}
+            required
+          >
             <option value="">Select a genre</option>
             {store.genres?.map((genre) => (
               <option key={genre.id} value={genre.id}>

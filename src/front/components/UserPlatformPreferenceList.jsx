@@ -6,6 +6,7 @@ const UserPlatformPreferenceList = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
     const [formData, setFormData] = useState({ user_id: "", platform_id: "" });
+    const user = store.user;
 
     useEffect(() => {
         fetchPreferences();
@@ -91,26 +92,41 @@ const UserPlatformPreferenceList = () => {
         }
     };
 
+    useEffect(() => {
+        if (user && user.role !== "admin") {
+            setFormData((prev) => ({ ...prev, user_id: user.id }));
+        }
+    }, [user]);
+
     return (
         <div className="container my-4">
             <h2 className="mb-4">User ↔ Platform Preferences</h2>
 
             <form className="row g-2 mb-4" onSubmit={handleSubmit}>
                 <div className="col-md-5">
-                    <select
-                        name="user_id"
-                        className="form-select"
-                        value={formData.user_id}
-                        onChange={handleChange}
-                        required
-                    >
-                        <option value="">Select a user</option>
-                        {store.users?.map((user) => (
-                            <option key={user.id} value={user.id}>
-                                {user.nickname}
-                            </option>
-                        ))}
-                    </select>
+                    {user?.role !== "admin" ? (
+                        <>
+                            <div className="form-control my-2 bg-light">
+                                {user?.name || user?.nickname || "Unknown user"}
+                            </div>
+                            <input type="hidden" name="user_id" value={user?.id} />
+                        </>
+                    ) : (
+                        <select
+                            name="user_id"
+                            className="form-select"
+                            value={formData.user_id}
+                            onChange={handleChange}
+                            required
+                        >
+                            <option value="">Select a user</option>
+                            {store.users?.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                    {u.nickname || u.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                 </div>
 
                 <div className="col-md-5">

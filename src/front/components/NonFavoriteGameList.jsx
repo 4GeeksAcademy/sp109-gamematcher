@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Trash3 } from 'react-bootstrap-icons';
+import useGlobalReducer from '../hooks/useGlobalReducer';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -9,6 +10,7 @@ const NonFavoriteGameList = () => {
   const [nonFavorites, setNonFavorites] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedGameId, setSelectedGameId] = useState('');
+  const { store } = useGlobalReducer();
 
   useEffect(() => {
     fetch(`${backendUrl}/api/users`)
@@ -19,6 +21,12 @@ const NonFavoriteGameList = () => {
       .then(res => res.json())
       .then(data => setGames(data));
   }, []);
+
+  useEffect(() => {
+    if (store.currentUser?.id) {
+      setSelectedUserId(String(store.currentUser.id));
+    }
+  }, [store.currentUser]);
 
   useEffect(() => {
     if (!selectedUserId) return;
@@ -59,11 +67,13 @@ const NonFavoriteGameList = () => {
           <select
             className="form-select"
             value={selectedUserId}
-            onChange={(e) => setSelectedUserId(e.target.value)}
+            disabled 
           >
             <option value="">Select User</option>
             {users.map(user => (
-              <option key={user.id} value={user.id}>{user.email || user.username || `Usuario ${user.id}`}</option>
+              <option key={user.id} value={user.id}>
+                {user.email || user.username || `User ${user.id}`}
+              </option>
             ))}
           </select>
         </div>
