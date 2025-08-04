@@ -24,42 +24,46 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Login from "./pages/Login";
 
-
-
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<Layout />} errorElement={<h1>Not found!</h1>} >
       <Route path="/" element={<Home />} />
-      <Route path="/games" element={<GameManager />} />
-      <Route path="/platforms" element={<Platforms />} />
-      <Route path="/genres" element={<Genres />} />
 
-      {/* Rutas protegidas - solo usuarios autenticados */}
+      {/* Rutas protegidas - solo admins */}
+      <Route path="/games" element={
+        <ProtectedRoute element={GameManager} roles={["admin"]} />
+      } />
+      <Route path="/platforms" element={
+        <ProtectedRoute element={Platforms} roles={["admin"]} />
+      } />
+      <Route path="/genres" element={
+        <ProtectedRoute element={Genres} roles={["admin"]} />
+      } />
       <Route path="/users" element={
         <ProtectedRoute element={Users} roles={["admin"]} />
       } />
       <Route path="/admins" element={
         <ProtectedRoute element={AdminManager} roles={["admin"]} />
       } />
-      <Route path="/user-game-favorites" element={
-        <ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />
-      } />
-
-      {/* Rutas administrativas - solo admins */}
       <Route path="/game-platforms" element={
         <ProtectedRoute element={GamePlatformList} roles={["admin"]} />
       } />
       <Route path="/game-genres" element={
         <ProtectedRoute element={GameGenreList} roles={["admin"]} />
       } />
+
+      {/* Rutas accesibles por admin y user */}
+      <Route path="/user-game-favorites" element={
+        <ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />
+      } />
       <Route path="/user-platform-preferences" element={
-        <ProtectedRoute element={UserPlatformPreferenceList} roles={["admin"]} />
+        <ProtectedRoute element={UserPlatformPreferenceList} roles={["user", "admin"]} />
       } />
       <Route path="/user-genre-preferences" element={
-        <ProtectedRoute element={UserGenrePreferenceList} roles={["admin"]} />
+        <ProtectedRoute element={UserGenrePreferenceList} roles={["user", "admin"]} />
       } />
       <Route path="/users/non-favorites" element={
-        <ProtectedRoute element={NonFavoriteGameList} roles={["admin"]} />
+        <ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />
       } />
 
       {/* Rutas públicas */}

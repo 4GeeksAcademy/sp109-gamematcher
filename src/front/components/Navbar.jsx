@@ -9,6 +9,9 @@ export const Navbar = () => {
     logout();
   };
 
+  const isAdmin = isAuthenticated && user?.role === "admin";
+  const isUser = isAuthenticated && user?.role === "user";
+
   return (
     <nav className="navbar navbar-light bg-light">
       <div className="container">
@@ -16,30 +19,45 @@ export const Navbar = () => {
           <span className="navbar-brand mb-0 h1">Game Matcher</span>
         </Link>
         <div className="ml-auto">
-          {/* Rutas públicas - siempre visibles */}
-          <Link to="/games">
-            <button className="btn btn-outline-primary m-1">Games</button>
-          </Link>
-          <Link to="/genres">
-            <button className="btn btn-outline-primary m-1">Genres</button>
-          </Link>
-          <Link to="/platforms">
-            <button className="btn btn-outline-primary m-1">Platforms</button>
-          </Link>
+          {/* Ruta pública visible siempre */}
           <Link to="/rawg">
             <button className="btn btn-outline-primary m-1">RAWG List</button>
           </Link>
 
-          {/* Rutas para usuarios autenticados */}
+          {/* Rutas accesibles por cualquier usuario logueado */}
           {isAuthenticated && (
             <Link to="/user-game-favorites">
               <button className="btn btn-outline-primary m-1">Mis Favoritos</button>
             </Link>
           )}
 
-          {/* Rutas solo para administradores */}
-          {isAuthenticated && user?.role === "admin" && (
+          {/* Rutas accesibles por admin o user */}
+          {isAuthenticated && (isUser || isAdmin) && (
             <>
+              <Link to="/user-platform-preferences">
+                <button className="btn btn-outline-primary m-1">Mis Plataformas</button>
+              </Link>
+              <Link to="/user-genre-preferences">
+                <button className="btn btn-outline-primary m-1">Mis Géneros</button>
+              </Link>
+              <Link to="/users/non-favorites">
+                <button className="btn btn-outline-primary m-1">No Favoritos</button>
+              </Link>
+            </>
+          )}
+
+          {/* Rutas solo para administradores */}
+          {isAdmin && (
+            <>
+              <Link to="/games">
+                <button className="btn btn-outline-primary m-1">Games</button>
+              </Link>
+              <Link to="/genres">
+                <button className="btn btn-outline-primary m-1">Genres</button>
+              </Link>
+              <Link to="/platforms">
+                <button className="btn btn-outline-primary m-1">Platforms</button>
+              </Link>
               <Link to="/users">
                 <button className="btn btn-outline-warning m-1">Users</button>
               </Link>
@@ -51,15 +69,6 @@ export const Navbar = () => {
               </Link>
               <Link to="/game-genres">
                 <button className="btn btn-outline-warning m-1">Game-Genres</button>
-              </Link>
-              <Link to="/user-platform-preferences">
-                <button className="btn btn-outline-warning m-1">User-Platform Preferences</button>
-              </Link>
-              <Link to="/user-genre-preferences">
-                <button className="btn btn-outline-warning m-1">User-Genre Preferences</button>
-              </Link>
-              <Link to="/users/non-favorites">
-                <button className="btn btn-outline-warning m-1">User-Non-Favorites</button>
               </Link>
             </>
           )}
@@ -88,3 +97,5 @@ export const Navbar = () => {
     </nav>
   );
 };
+
+
