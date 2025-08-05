@@ -1,29 +1,49 @@
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import useGlobalReducer from "../hooks/useGlobalReducer";
+import { useAuth } from "../context/AuthContext";
 
 export const RawgGameList = () => {
   const { store, dispatch } = useGlobalReducer();
+  const { isAuthenticated, user } = useAuth();
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const fetchGames = async () => {
     try {
-      // Obtener juegos de la base de datos local
-      const res = await fetch(`${backendUrl}/api/games`);
-      const data = await res.json();
-      dispatch({ type: "set_games", payload: data });
+      // Si el usuario está logueado, usar recomendaciones
+      if (isAuthenticated && user?.role === "user") {
+        const token = sessionStorage.getItem("token");
+        const res = await fetch(`${backendUrl}/api/games/recommendations`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        const data = await res.json();
+        dispatch({ type: "set_games", payload: data });
+      } else {
+        // Si no está logueado, mostrar todos los juegos
+        const res = await fetch(`${backendUrl}/api/games`);
+        const data = await res.json();
+        dispatch({ type: "set_games", payload: data });
+      }
     } catch (err) {
-      console.error("Error fetching games from database:", err);
+      console.error("Error fetching games:", err);
     }
   };
 
   useEffect(() => {
     fetchGames();
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <div className="container py-4">
-      <h2 className="mb-4">Biblioteca de Juegos</h2>
+      <h2 className="mb-4">
+        {isAuthenticated && user?.role === "user"
+          ? "Recomendaciones para ti"
+          : "Biblioteca de Juegos"
+        }
+      </h2>
 
       {!store.games || store.games.length === 0 ? (
         <div className="text-center py-4">
