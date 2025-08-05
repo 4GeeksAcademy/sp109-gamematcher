@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 export const UserGameFavoriteManager = () => {
   const [favorites, setFavorites] = useState([]);
@@ -6,6 +7,7 @@ export const UserGameFavoriteManager = () => {
   const [games, setGames] = useState([]);
   const [form, setForm] = useState({ user_id: "", game_id: "" });
 
+  const { user } = useAuth();
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const loadFavorites = async () => {
@@ -42,6 +44,12 @@ export const UserGameFavoriteManager = () => {
     loadGames();
   }, []);
 
+  useEffect(() => {
+    if (user?.role !== "admin" && user?.id) {
+      setForm((form) => ({ ...form, user_id: user.id }));
+    }
+  }, [user]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const res = await fetch(`${backendUrl}/api/favorites`, {
@@ -50,7 +58,7 @@ export const UserGameFavoriteManager = () => {
       body: JSON.stringify(form),
     });
     if (res.ok) {
-      setForm({ user_id: "", game_id: "" });
+      setForm({ user_id: user?.role === "admin" ? "" : user.id, game_id: "" });
       loadFavorites();
     }
   };
@@ -64,6 +72,11 @@ export const UserGameFavoriteManager = () => {
     }
   };
 
+  // Esto filtra solo si NO es admin
+  const filteredFavorites = user?.role === "admin"
+    ? favorites
+    : favorites.filter(fav => fav.user_id === user?.id);
+
   return (
     <div className="container py-4">
       <h2>Favoritos de Usuarios</h2>
@@ -72,19 +85,31 @@ export const UserGameFavoriteManager = () => {
         <div className="row">
           <div className="col-md-6">
             <label className="form-label">Usuario:</label>
-            <select
-              className="form-select my-2"
-              value={form.user_id}
-              onChange={(e) => setForm({ ...form, user_id: e.target.value })}
-              required
-            >
-              <option value="">Selecciona un usuario</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.nickname}
-                </option>
-              ))}
-            </select>
+            {user?.role === "admin" ? (
+              <select
+                className="form-select my-2"
+                value={form.user_id}
+                onChange={(e) => setForm({ ...form, user_id: e.target.value })}
+                required
+              >
+                <option value="">Selecciona un usuario</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.nickname}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  className="form-control my-2"
+                  value={user.name}
+                  disabled
+                />
+                <input type="hidden" value={user.id} />
+              </>
+            )}
           </div>
           <div className="col-md-6">
             <label className="form-label">Juego:</label>
@@ -109,7 +134,7 @@ export const UserGameFavoriteManager = () => {
       </form>
 
       <ul className="list-group">
-        {favorites.map((item) => (
+        {filteredFavorites.map((item) => (
           <li key={item.id} className="list-group-item d-flex justify-content-between align-items-center">
             <div>
               <strong>{getUserName(item.user_id)}</strong> - {getGameName(item.game_id)}
@@ -122,7 +147,7 @@ export const UserGameFavoriteManager = () => {
             </button>
           </li>
         ))}
-        {favorites.length === 0 && (
+        {filteredFavorites.length === 0 && (
           <li className="list-group-item text-center text-muted">
             No hay favoritos registrados
           </li>
