@@ -926,3 +926,95 @@ def verify_token():
 
     # Si no se encuentra el usuario, el token es inválido
     return jsonify({"msg": "Token inválido o usuario no encontrado"}), 401
+
+# Recomendations
+
+
+def get_user_preferences(user_id):
+    """Obtiene las preferencias de géneros y plataformas del usuario"""
+
+    # Géneros preferidos del usuario
+    genre_prefs = UserGenrePreference.query.filter_by(user_id=user_id).all()
+    preferred_genre_ids = [pref.genre_id for pref in genre_prefs]
+
+    # Plataformas preferidas del usuario
+    platform_prefs = UserPlatformPreference.query.filter_by(
+        user_id=user_id).all()
+    preferred_platform_ids = [pref.platform_id for pref in platform_prefs]
+
+    return preferred_genre_ids, preferred_platform_ids
+
+
+def get_user_excluded_games(user_id):
+    """Obtiene IDs de juegos que el usuario ya marcó como favoritos o no-favoritos"""
+
+    # Favoritos del usuario
+    favorites = UserGameFavorite.query.filter_by(user_id=user_id).all()
+    favorite_game_ids = [fav.game_id for fav in favorites]
+
+    # No favoritos del usuario
+    non_favorites = NonFavoriteGame.query.filter_by(user_id=user_id).all()
+    non_favorite_game_ids = [non_fav.game_id for non_fav in non_favorites]
+
+    # Combinar ambas listas
+    excluded_game_ids = list(set(favorite_game_ids + non_favorite_game_ids))
+
+    return excluded_game_ids
+
+
+@api.route('/games/recommendations', methods=['GET'])
+@jwt_required()
+def get_game_recommendations():
+    """Obtiene recomendaciones personalizadas de juegos para el usuario autenticado"""
+    
+    try:
+        # Obtener el usuario autenticado
+        current_user_identity = get_jwt_identity()
+        user = db.session.execute(select(User).where(
+            User.nickname == current_user_identity)).scalar_one_or_none()
+        
+        if not user:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+        
+        # Obtener preferencias del usuario
+        preferred_genre_ids, preferred_platform_ids = get_user_preferences(user.id)
+        
+        # Obtener juegos que ya evaluó el usuario (para excluir)
+        excluded_game_ids = get_user_excluded_games(user.id)
+        
+        # Construir query base de juegos
+        query = Game.query
+        
+        # Excluir juegos ya evaluados
+        if excluded_game_ids:
+            query = query.filter(~Game.id.in_(excluded_game_ids))
+        
+        # Filtrar por géneros preferidos si los tiene
+        if preferred_genre_ids:
+            query = query.join(GameGenre).filter(GameGenre.genre_id.in_(preferred_genre_ids))
+        
+        # Filtrar por plataformas preferidas si las tiene
+        if preferred_platform_ids:
+            query = query.join(GamePlatform).filter(GamePlatform.platform_id.in_(preferred_platform_ids))
+        
+        # Ordenar por rating descendente y limitar a 25 juegos
+        recommended_games = query.order_by(Game.rating.desc()).limit(25).all()
+        
+        # Si no hay suficientes juegos con las preferencias, completar con juegos generales
+        if len(recommended_games) < 25:
+            remaining_slots = 25 - len(recommended_games)
+            recommended_game_ids = [game.id for game in recommended_games]
+            excluded_game_ids.extend(recommended_game_ids)
+            
+            # Obtener juegos adicionales sin filtros de preferencia
+            additional_games = Game.query.filter(
+                ~Game.id.in_(excluded_game_ids)
+            ).order_by(Game.rating.desc()).limit(remaining_slots).all()
+            
+            recommended_games.extend(additional_games)
+        
+        return jsonify([game.serialize() for game in recommended_games]), 200
+        
+    except Exception as e:
+        return jsonify({"error": f"Error al generar recomendaciones: {str(e)}"}), 500
+
