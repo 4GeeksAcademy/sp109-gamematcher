@@ -5,15 +5,17 @@ import { useAuth } from "../context/AuthContext";
 const Login = () => {
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
+  const [mode, setMode] = useState("login"); // "login" o "signup"
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
-  const { loginUser } = useAuth();
+
+  const { loginUser, isAuthenticated } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
       await loginUser(nickname, password);
     } catch (err) {
@@ -23,14 +25,61 @@ const Login = () => {
     }
   };
 
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user-signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.msg || "Error al registrarse");
+      setSuccess("¡Registro exitoso! Ahora puedes iniciar sesión.");
+      setMode("login");
+      setNickname("");
+      setPassword("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isAuthenticated) return null; // Ocultar login/registro si ya está logueado
+
   return (
     <div className="container mt-5">
       <div className="row justify-content-center">
         <div className="col-md-6">
           <div className="card">
             <div className="card-body">
-              <h2 className="card-title text-center mb-4">Iniciar Sesión</h2>
-              <form onSubmit={handleLogin}>
+              <div className="d-flex justify-content-center mb-3">
+                <button
+                  className={`btn btn-sm ${mode === "login" ? "btn-primary" : "btn-outline-primary"} me-2`}
+                  onClick={() => setMode("login")}
+                >
+                  Iniciar Sesión
+                </button>
+                <button
+                  className={`btn btn-sm ${mode === "signup" ? "btn-primary" : "btn-outline-primary"}`}
+                  onClick={() => setMode("signup")}
+                >
+                  Registrarse
+                </button>
+              </div>
+
+              <h3 className="text-center mb-4">
+                {mode === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
+              </h3>
+
+              <form onSubmit={mode === "login" ? handleLogin : handleSignup}>
                 <div className="form-group mb-3">
                   <label htmlFor="nickname">Nickname:</label>
                   <input
@@ -40,7 +89,6 @@ const Login = () => {
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     required
-                    disabled={loading}
                     placeholder="tu_nickname"
                   />
                 </div>
@@ -53,17 +101,21 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    disabled={loading}
                     placeholder="Tu contraseña"
                   />
                 </div>
+
                 {error && <div className="alert alert-danger">{error}</div>}
-                <button
-                  type="submit"
-                  className="btn btn-primary w-100 mb-3"
-                  disabled={loading}
-                >
-                  {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                {success && <div className="alert alert-success">{success}</div>}
+
+                <button type="submit" className="btn btn-primary w-100 mb-3" disabled={loading}>
+                  {loading
+                    ? mode === "login"
+                      ? "Iniciando..."
+                      : "Registrando..."
+                    : mode === "login"
+                    ? "Iniciar Sesión"
+                    : "Registrarse"}
                 </button>
               </form>
 
@@ -82,3 +134,4 @@ const Login = () => {
 };
 
 export default Login;
+

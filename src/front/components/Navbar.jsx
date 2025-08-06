@@ -7,6 +7,7 @@ export const Navbar = () => {
 
   const handleLogout = () => {
     logout();
+    navigate("/"); // Redireccionar al home después de logout
   };
 
   const isAdmin = isAuthenticated && user?.role === "admin";
@@ -73,20 +74,17 @@ export const Navbar = () => {
             </>
           )}
 
-          {/* Botones de autenticación */}
+          {/* Autenticación - solo se muestra LOGIN si no está autenticado */}
           {!isAuthenticated && (
-            <>
-              <Link to="/login">
-                <button className="btn btn-outline-success m-1">Login</button>
-              </Link>
-              <Link to="/admin-login">
-                <button className="btn btn-outline-warning m-1">Admin</button>
-              </Link>
-            </>
+            <Link to="/login">
+              <button className="btn btn-outline-success m-1">Login</button>
+            </Link>
           )}
+
+          {/* Solo se muestra LOGOUT si está autenticado */}
           {isAuthenticated && (
             <>
-              <span className="text-muted m-1">Hola, {user?.name}</span>
+              <span className="text-muted m-1">Hola, {user?.name || user?.nickname}</span>
               <button className="btn btn-outline-danger m-1" onClick={handleLogout}>
                 Logout
               </button>
@@ -97,5 +95,6 @@ export const Navbar = () => {
     </nav>
   );
 };
+
 
 
