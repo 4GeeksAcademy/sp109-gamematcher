@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const [nickname, setNickname] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState("login"); // "login" o "signup"
   const [error, setError] = useState(null);
@@ -32,10 +33,10 @@ const Login = () => {
     setSuccess(null);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user-signup`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname, password }),
+        body: JSON.stringify({ nickname, email, password }),
       });
 
       const data = await res.json();
@@ -44,6 +45,7 @@ const Login = () => {
       setSuccess("¡Registro exitoso! Ahora puedes iniciar sesión.");
       setMode("login");
       setNickname("");
+      setEmail("");
       setPassword("");
     } catch (err) {
       setError(err.message);
@@ -92,6 +94,20 @@ const Login = () => {
                     placeholder="tu_nickname"
                   />
                 </div>
+                {mode === "signup" && (
+                  <div className="form-group mb-3">
+                    <label htmlFor="email">Email:</label>
+                    <input
+                      type="email"
+                      id="email"
+                      className="form-control"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder="tu@email.com"
+                    />
+                  </div>
+                )}
                 <div className="form-group mb-3">
                   <label htmlFor="password">Contraseña:</label>
                   <input
@@ -114,8 +130,8 @@ const Login = () => {
                       ? "Iniciando..."
                       : "Registrando..."
                     : mode === "login"
-                    ? "Iniciar Sesión"
-                    : "Registrarse"}
+                      ? "Iniciar Sesión"
+                      : "Registrarse"}
                 </button>
               </form>
 
