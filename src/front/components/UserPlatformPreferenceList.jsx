@@ -105,7 +105,7 @@ const UserPlatformPreferenceList = () => {
               <option value="">Select user</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.email || u.username || `User ${u.id}`}
+                  {u.nickname || u.name || `User ${u.id}`}
                 </option>
               ))}
             </select>
@@ -114,7 +114,7 @@ const UserPlatformPreferenceList = () => {
               <input
                 type="text"
                 className="form-control"
-                value={user?.email || user?.username || `User ${user?.id}`}
+                value={user?.nickname || user?.name || `User ${user?.id}`}
                 disabled
               />
               <input type="hidden" name="user_id" value={formData.user_id} />
