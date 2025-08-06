@@ -784,14 +784,19 @@ def user_login():
 
 
 # GET all user-genre preferences
+# GET all or filtered user-genre preferences
 @api.route('/user-genre-preferences', methods=['GET'])
 def get_all_user_genre_preferences():
-    preferences = UserGenrePreference.query.all()
+    user_id = request.args.get('user_id', type=int)
+
+    if user_id is not None:
+        preferences = UserGenrePreference.query.filter_by(user_id=user_id).all()
+    else:
+        preferences = UserGenrePreference.query.all()
+
     return jsonify([p.serialize() for p in preferences]), 200
 
 # GET one user-genre preference by ID
-
-
 @api.route('/user-genre-preferences/<int:id>', methods=['GET'])
 def get_user_genre_preference(id):
     preference = UserGenrePreference.query.get(id)

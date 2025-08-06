@@ -164,8 +164,8 @@ class UserGenrePreference(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "genre_id": self.genre_id,
-            "user_name": self.user.nickname,
-            "genre_name": self.genre.name
+            "user_name": self.user.nickname if self.user else None,
+            "genre_name": self.genre.name if self.genre else None
         }
 
 
