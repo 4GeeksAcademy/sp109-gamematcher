@@ -12,6 +12,7 @@ export const initialStore = () => {
     rawgGames: [],
     isAdminAuthenticated: false,
     adminToken: null,
+    auth: false,
   };
 };
 

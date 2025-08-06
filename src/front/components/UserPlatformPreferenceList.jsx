@@ -1,178 +1,195 @@
 import React, { useEffect, useState } from "react";
-import useGlobalReducer from "../hooks/useGlobalReducer";
+import { Trash3 } from "react-bootstrap-icons";
+import { useAuth } from "../context/AuthContext";
+
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const UserPlatformPreferenceList = () => {
-    const { store, dispatch } = useGlobalReducer();
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const { user } = useAuth();
 
-    const [formData, setFormData] = useState({ user_id: "", platform_id: "" });
+  const [users, setUsers] = useState([]);
+  const [platforms, setPlatforms] = useState([]);
+  const [userPlatformPreferences, setUserPlatformPreferences] = useState([]);
+  const [formData, setFormData] = useState({
+    user_id: "",
+    platform_id: "",
+  });
 
-    useEffect(() => {
-        fetchPreferences();
-        fetchUsers();
-        fetchPlatforms();
-    }, []);
+  // Carregar usuaris i plataformes al muntar
+  useEffect(() => {
+    fetch(`${backendUrl}/api/users`)
+      .then((res) => res.json())
+      .then((data) => setUsers(data));
 
-    const fetchPreferences = async () => {
-        try {
-            const res = await fetch(`${backendUrl}/api/user-platform-preferences`);
-            const data = await res.json();
-            dispatch({ type: "set_userPlatformPreferences", payload: data });
-        } catch (error) {
-            console.error(error);
-        }
-    };
+    fetch(`${backendUrl}/api/platforms`)
+      .then((res) => res.json())
+      .then((data) => setPlatforms(data));
+  }, []);
 
-    const fetchUsers = async () => {
-        try {
-            const res = await fetch(`${backendUrl}/api/users`);
-            const data = await res.json();
-            dispatch({ type: "set_users", payload: data });
-        } catch (error) {
-            console.error("Error loading users:", error);
-        }
-    };
+  // Posar user_id automàticament si no és admin
+  useEffect(() => {
+    if (user?.role !== "admin" && user?.id) {
+      setFormData((form) => ({ ...form, user_id: user.id.toString() }));
+    }
+  }, [user]);
 
-    const fetchPlatforms = async () => {
-        try {
-            const res = await fetch(`${backendUrl}/api/platforms`);
-            const data = await res.json();
-            dispatch({ type: "set_platforms", payload: data });
-        } catch (error) {
-            console.error("Error loading platforms:", error);
-        }
-    };
+  // Carregar preferències quan canvia user_id
+  useEffect(() => {
+    if (!formData.user_id) {
+      setUserPlatformPreferences([]);
+      return;
+    }
+    fetch(`${backendUrl}/api/user-platform-preferences?user_id=${formData.user_id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Error loading preferences");
+        return res.json();
+      })
+      .then((data) => setUserPlatformPreferences(data))
+      .catch(() => setUserPlatformPreferences([]));
+  }, [formData.user_id]);
 
-    const handleDelete = async (id) => {
-        try {
-            const res = await fetch(`${backendUrl}/api/user-platform-preferences/${id}`, {
-                method: "DELETE",
-            });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((form) => ({
+      ...form,
+      [name]: value,
+    }));
+  };
 
-            if (res.ok) {
-                dispatch({
-                    type: "set_userPlatformPreferences",
-                    payload: store.userPlatformPreferences.filter((assoc) => assoc.id !== id),
-                });
-            }
-        } catch (error) {
-            alert(error.message);
-        }
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+    if (!formData.user_id || !formData.platform_id) return;
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!formData.user_id || !formData.platform_id) return;
+    const res = await fetch(`${backendUrl}/api/user-platform-preferences`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: parseInt(formData.user_id, 10),
+        platform_id: parseInt(formData.platform_id, 10),
+      }),
+    });
 
-        try {
-            const res = await fetch(`${backendUrl}/api/user-platform-preferences`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
-            });
+    if (res.ok) {
+      setFormData((form) => ({ ...form, platform_id: "" }));
+      // Refrescar llistat
+      fetch(`${backendUrl}/api/user-platform-preferences?user_id=${formData.user_id}`)
+        .then((res) => res.json())
+        .then((data) => setUserPlatformPreferences(data));
+    }
+  };
 
-            if (res.ok) {
-                const newAssoc = await res.json();
-                dispatch({
-                    type: "set_userPlatformPreferences",
-                    payload: [...store.userPlatformPreferences, newAssoc],
-                });
-                setFormData({ user_id: "", platform_id: "" });
-            } else {
-                const error = await res.json();
-                alert(error.error || "Error creating association.");
-            }
-        } catch (error) {
-            alert(error.message);
-        }
-    };
+  const handleDelete = async (id) => {
+    const res = await fetch(`${backendUrl}/api/user-platform-preferences/${id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setUserPlatformPreferences((prefs) => prefs.filter((p) => p.id !== id));
+    }
+  };
 
-    return (
-        <div className="container my-4">
-            <h2 className="mb-4">User ↔ Platform Preferences</h2>
+  return (
+    <div className="container my-4">
+      <h3 className="mb-3">User ↔ Platform Preferences</h3>
 
-            <form className="row g-2 mb-4" onSubmit={handleSubmit}>
-                <div className="col-md-5">
-                    <select
-                        name="user_id"
-                        className="form-select"
-                        value={formData.user_id}
-                        onChange={handleChange}
-                        required
-                    >
-                        <option value="">Select a user</option>
-                        {store.users?.map((user) => (
-                            <option key={user.id} value={user.id}>
-                                {user.nickname}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="col-md-5">
-                    <select
-                        name="platform_id"
-                        className="form-select"
-                        value={formData.platform_id}
-                        onChange={handleChange}
-                        required
-                    >
-                        <option value="">Select a platform</option>
-                        {store.platforms?.map((platform) => (
-                            <option key={platform.id} value={platform.id}>
-                                {platform.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="col-md-2 d-grid">
-                    <button type="submit" className="btn btn-primary">
-                        ➕ Add
-                    </button>
-                </div>
-            </form>
-
-            <table className="table table-striped table-bordered">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Platform</th>
-                        <th className="text-center" style={{ width: "50px" }}></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {store.userPlatformPreferences?.length > 0 ? (
-                        store.userPlatformPreferences.map((assoc) => (
-                            <tr key={assoc.id}>
-                                <td>{assoc.user?.nickname || assoc.user_nickname}</td>
-                                <td>{assoc.platform?.name || assoc.platform_name}</td>
-                                <td className="text-center">
-                                    <button
-                                        className="btn btn-sm btn-outline-danger"
-                                        onClick={() => handleDelete(assoc.id)}
-                                        title="Delete"
-                                    >
-                                        🗑️
-                                    </button>
-                                </td>
-                            </tr>
-                        ))
-                    ) : (
-                        <tr>
-                            <td colSpan="3" className="text-center">
-                                No preferences set.
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
+      <form className="row mb-3" onSubmit={handleSubmit}>
+        <div className="col-md-6">
+          {user?.role === "admin" ? (
+            <select
+              name="user_id"
+              className="form-select"
+              value={formData.user_id}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select user</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.email || u.username || `User ${u.id}`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <input
+                type="text"
+                className="form-control"
+                value={user?.email || user?.username || `User ${user?.id}`}
+                disabled
+              />
+              <input type="hidden" name="user_id" value={formData.user_id} />
+            </>
+          )}
         </div>
-    );
+
+        <div className="col-md-6">
+          <select
+            name="platform_id"
+            className="form-select"
+            value={formData.platform_id}
+            onChange={handleChange}
+            required
+          >
+            <option value="">Select a platform</option>
+            {platforms.map((platform) => (
+              <option key={platform.id} value={platform.id}>
+                {platform.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="col-md-12 mt-3 d-grid">
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={!formData.user_id || !formData.platform_id}
+          >
+            + Add
+          </button>
+        </div>
+      </form>
+
+      <table className="table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Platform</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {userPlatformPreferences.length > 0 ? (
+            userPlatformPreferences.map((pref) => (
+              <tr key={pref.id}>
+                <td>
+                  {user?.role === "admin"
+                    ? users.find((u) => u.id === pref.user_id)?.email || pref.user_name
+                    : user?.email || user?.username}
+                </td>
+                <td>{pref.platform_name}</td>
+                <td>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={() => handleDelete(pref.id)}
+                    type="button"
+                  >
+                    <Trash3 />
+                  </button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={3} className="text-center text-muted">
+                No preferences found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 };
 
 export default UserPlatformPreferenceList;

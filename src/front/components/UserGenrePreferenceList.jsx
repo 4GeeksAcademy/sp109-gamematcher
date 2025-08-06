@@ -1,121 +1,185 @@
 import React, { useEffect, useState } from "react";
-import useGlobalReducer from "../hooks/useGlobalReducer";
+import { useAuth } from "../context/AuthContext";
 
 const UserGenrePreferenceList = () => {
-  const { store, dispatch } = useGlobalReducer();
+  const { user } = useAuth();
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  const [formData, setFormData] = useState({ user_id: "", genre_id: "" });
 
+  const [users, setUsers] = useState([]);
+  const [genres, setGenres] = useState([]);
+  const [userGenrePreferences, setUserGenrePreferences] = useState([]);
+
+  const [formData, setFormData] = useState({
+    user_id: "",
+    genre_id: "",
+  });
+
+  // Carregar usuaris i gèneres al muntar
   useEffect(() => {
-    fetchAssociations();
-    fetchUsers();
-    fetchGenres();
+    fetch(`${backendUrl}/api/users`)
+      .then(res => res.json())
+      .then(data => setUsers(data));
+
+    fetch(`${backendUrl}/api/genres`)
+      .then(res => res.json())
+      .then(data => setGenres(data));
   }, []);
 
-  const fetchAssociations = async () => {
-    const res = await fetch(`${backendUrl}/api/user-genre-preferences`);
-    const data = await res.json();
-    dispatch({ type: "set_userGenrePreferences", payload: data });
-  };
-
-  const fetchUsers = async () => {
-    const res = await fetch(`${backendUrl}/api/users`);
-    const data = await res.json();
-    dispatch({ type: "set_users", payload: data });
-  };
-
-  const fetchGenres = async () => {
-    const res = await fetch(`${backendUrl}/api/genres`);
-    const data = await res.json();
-    dispatch({ type: "set_genres", payload: data });
-  };
-
-  const handleDelete = async (id) => {
-    const res = await fetch(`${backendUrl}/api/user-genre-preferences/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      dispatch({
-        type: "set_userGenrePreferences",
-        payload: store.userGenrePreferences.filter((assoc) => assoc.id !== id),
-      });
+  // Posar user_id automàticament si no és admin
+  useEffect(() => {
+    if (user?.role !== "admin" && user?.id) {
+      setFormData(form => ({ ...form, user_id: user.id.toString() }));
     }
-  };
+  }, [user]);
+
+  // Carregar preferències quan canvia user_id
+  useEffect(() => {
+    if (!formData.user_id) {
+      setUserGenrePreferences([]);
+      return;
+    }
+    fetch(`${backendUrl}/api/user-genre-preferences?user_id=${formData.user_id}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Error loading preferences");
+        return res.json();
+      })
+      .then(data => setUserGenrePreferences(data))
+      .catch(() => setUserGenrePreferences([]));
+  }, [formData.user_id]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(form => ({
+      ...form,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.user_id || !formData.genre_id) return;
+
     const res = await fetch(`${backendUrl}/api/user-genre-preferences`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
+      body: JSON.stringify({
+        user_id: parseInt(formData.user_id, 10),
+        genre_id: parseInt(formData.genre_id, 10),
+      }),
     });
 
     if (res.ok) {
-      const newAssoc = await res.json();
-      dispatch({
-        type: "set_userGenrePreferences",
-        payload: [...store.userGenrePreferences, newAssoc],
-      });
-      setFormData({ user_id: "", genre_id: "" });
+      setFormData(form => ({ ...form, genre_id: "" }));
+      // Refrescar llistat
+      fetch(`${backendUrl}/api/user-genre-preferences?user_id=${formData.user_id}`)
+        .then(res => res.json())
+        .then(data => setUserGenrePreferences(data));
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const res = await fetch(`${backendUrl}/api/user-genre-preferences/${id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setUserGenrePreferences(prefs => prefs.filter(p => p.id !== id));
     }
   };
 
   return (
     <div className="container my-4">
-      <h2 className="mb-4">User ↔ Genre Preferences</h2>
+      <h3 className="mb-3">User ↔ Genre Preferences</h3>
 
-      <form className="row g-2 mb-4" onSubmit={handleSubmit}>
-        <div className="col-md-5">
-          <select name="user_id" className="form-select" value={formData.user_id} onChange={handleChange} required>
-            <option value="">Select a user</option>
-            {store.users?.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.nickname}
-              </option>
-            ))}
-          </select>
+      <div className="row mb-3">
+        <div className="col-md-6">
+          {user?.role === "admin" ? (
+            <select
+              name="user_id"
+              className="form-select"
+              value={formData.user_id}
+              onChange={handleChange}
+            >
+              <option value="">Select user</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nickname || u.name || u.email}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <input
+                type="text"
+                className="form-control"
+                value={user?.nickname || user?.name || user?.email}
+                disabled
+              />
+              <input type="hidden" name="user_id" value={formData.user_id} />
+            </>
+          )}
         </div>
 
-        <div className="col-md-5">
-          <select name="genre_id" className="form-select" value={formData.genre_id} onChange={handleChange} required>
+        <div className="col-md-6">
+          <select
+            name="genre_id"
+            className="form-select"
+            value={formData.genre_id}
+            onChange={handleChange}
+          >
             <option value="">Select a genre</option>
-            {store.genres?.map((genre) => (
+            {genres.map((genre) => (
               <option key={genre.id} value={genre.id}>
                 {genre.name}
               </option>
             ))}
           </select>
         </div>
+      </div>
 
-        <div className="col-md-2 d-grid">
-          <button type="submit" className="btn btn-primary">➕ Add</button>
+      <div className="row mb-3">
+        <div className="col">
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            onClick={handleSubmit}
+            disabled={!formData.user_id || !formData.genre_id}
+          >
+            + Add
+          </button>
         </div>
-      </form>
+      </div>
 
-      <table className="table table-striped table-bordered">
+      <table className="table">
         <thead>
           <tr>
             <th>User</th>
             <th>Genre</th>
-            <th className="text-center" style={{ width: "50px" }}></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          {store.userGenrePreferences?.length > 0 ? (
-            store.userGenrePreferences.map((assoc) => (
+          {userGenrePreferences.length > 0 ? (
+            userGenrePreferences.map((assoc) => (
               <tr key={assoc.id}>
-                <td>{assoc.user_name}</td>
-                <td>{assoc.genre_name}</td>
-                <td className="text-center">
-                  <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(assoc.id)}>🗑️</button>
+                <td>{assoc.user_name || assoc.user?.nickname || assoc.user_id}</td>
+                <td>{assoc.genre_name || assoc.genre?.name || assoc.genre_id}</td>
+                <td>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={() => handleDelete(assoc.id)}
+                    type="button"
+                  >
+                    🗑️
+                  </button>
                 </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="3" className="text-center">No associations yet.</td>
+              <td colSpan="3" className="text-center text-muted">
+                No preferences found
+              </td>
             </tr>
           )}
         </tbody>
