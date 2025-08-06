@@ -65,14 +65,27 @@ const NonFavoriteGameList = () => {
 
       <div className="row mb-3">
         <div className="col-md-6">
-          <select className="form-select" value={selectedUserId} disabled>
-            <option value="">Select User</option>
-            {users.map((userItem) => (
-              <option key={userItem.id} value={userItem.id}>
-                {userItem.email || userItem.username || `User ${userItem.id}`}
-              </option>
-            ))}
-          </select>
+          {user?.role === "admin" ? (
+            <select
+              className="form-select"
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+            >
+              <option value="">Select User</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.nickname || user.name || `User ${user.id}`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <div className="form-control bg-light">
+                {user.nickname || user.name || `User ${user.id}`}
+              </div>
+              <input type="hidden" value={selectedUserId} />
+            </>
+          )}
         </div>
       </div>
 
