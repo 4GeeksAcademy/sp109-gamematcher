@@ -15,7 +15,6 @@ const UserPlatformPreferenceList = () => {
     platform_id: "",
   });
 
-  // Carregar usuaris i plataformes al muntar
   useEffect(() => {
     fetch(`${backendUrl}/api/users`)
       .then((res) => res.json())
@@ -26,14 +25,12 @@ const UserPlatformPreferenceList = () => {
       .then((data) => setPlatforms(data));
   }, []);
 
-  // Posar user_id automàticament si no és admin
   useEffect(() => {
     if (user?.role !== "admin" && user?.id) {
       setFormData((form) => ({ ...form, user_id: user.id.toString() }));
     }
   }, [user]);
 
-  // Carregar preferències quan canvia user_id
   useEffect(() => {
     if (!formData.user_id) {
       setUserPlatformPreferences([]);
@@ -165,7 +162,7 @@ const UserPlatformPreferenceList = () => {
                 <td>
                   {user?.role === "admin"
                     ? users.find((u) => u.id === pref.user_id)?.email || pref.user_name
-                    : user?.email || user?.username}
+                    : user?.nickname || user?.name}
                 </td>
                 <td>{pref.platform_name}</td>
                 <td>

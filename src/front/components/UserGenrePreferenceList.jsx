@@ -14,7 +14,6 @@ const UserGenrePreferenceList = () => {
     genre_id: "",
   });
 
-  // Carregar usuaris i gèneres al muntar
   useEffect(() => {
     fetch(`${backendUrl}/api/users`)
       .then(res => res.json())
@@ -25,19 +24,18 @@ const UserGenrePreferenceList = () => {
       .then(data => setGenres(data));
   }, []);
 
-  // Posar user_id automàticament si no és admin
   useEffect(() => {
-    if (user?.role !== "admin" && user?.id) {
-      setFormData(form => ({ ...form, user_id: user.id.toString() }));
+    if (!user) return;
+
+    if (user.role !== "admin" && user.id) {
+      setFormData(form => ({ ...form, user_id: user.id }));
     }
   }, [user]);
 
-  // Carregar preferències quan canvia user_id
+
   useEffect(() => {
-    if (!formData.user_id) {
-      setUserGenrePreferences([]);
-      return;
-    }
+    if (!formData.user_id) return;
+
     fetch(`${backendUrl}/api/user-genre-preferences?user_id=${formData.user_id}`)
       .then(res => {
         if (!res.ok) throw new Error("Error loading preferences");
@@ -71,7 +69,6 @@ const UserGenrePreferenceList = () => {
 
     if (res.ok) {
       setFormData(form => ({ ...form, genre_id: "" }));
-      // Refrescar llistat
       fetch(`${backendUrl}/api/user-genre-preferences?user_id=${formData.user_id}`)
         .then(res => res.json())
         .then(data => setUserGenrePreferences(data));
