@@ -1,18 +1,27 @@
-import { Outlet } from "react-router-dom/dist"
-import ScrollToTop from "../components/ScrollToTop"
-import { Navbar } from "../components/Navbar"
-import { Footer } from "../components/Footer"
-import { AuthProvider } from "../context/AuthContext"
+import { Outlet } from "react-router-dom";
+import ScrollToTop from "../components/ScrollToTop";
+import { Navbar } from "../components/Navbar";
+import { Footer } from "../components/Footer";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 
-// Base component that maintains the navbar and footer throughout the page and the scroll to top functionality.
+const LayoutWithNavbar = () => {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <>
+      <Navbar key={isAuthenticated ? "auth" : "guest"} />
+      <Outlet />
+      <Footer />
+    </>
+  );
+};
+
 export const Layout = () => {
   return (
     <AuthProvider>
       <ScrollToTop>
-        <Navbar />
-        <Outlet />
-        <Footer />
+        <LayoutWithNavbar />
       </ScrollToTop>
     </AuthProvider>
-  )
-}
+  );
+};
