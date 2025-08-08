@@ -36,14 +36,20 @@ const UserPlatformPreferenceList = () => {
       setUserPlatformPreferences([]);
       return;
     }
-    fetch(`${backendUrl}/api/user-platform-preferences?user_id=${formData.user_id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Error loading preferences");
-        return res.json();
-      })
-      .then((data) => setUserPlatformPreferences(data))
-      .catch(() => setUserPlatformPreferences([]));
+
+    loadPreferences(formData.user_id);
   }, [formData.user_id]);
+
+  const loadPreferences = async (userId) => {
+    try {
+      const res = await fetch(`${backendUrl}/api/user-platform-preferences?user_id=${userId}`);
+      if (!res.ok) throw new Error("Error loading preferences");
+      const data = await res.json();
+      setUserPlatformPreferences(data);
+    } catch {
+      setUserPlatformPreferences([]);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -58,21 +64,22 @@ const UserPlatformPreferenceList = () => {
 
     if (!formData.user_id || !formData.platform_id) return;
 
+    const userId = user?.role === "admin"
+      ? parseInt(formData.user_id, 10)
+      : user.id;
+
     const res = await fetch(`${backendUrl}/api/user-platform-preferences`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        user_id: parseInt(formData.user_id, 10),
+        user_id: userId,
         platform_id: parseInt(formData.platform_id, 10),
       }),
     });
 
     if (res.ok) {
       setFormData((form) => ({ ...form, platform_id: "" }));
-      // Refrescar llistat
-      fetch(`${backendUrl}/api/user-platform-preferences?user_id=${formData.user_id}`)
-        .then((res) => res.json())
-        .then((data) => setUserPlatformPreferences(data));
+      loadPreferences(userId);
     }
   };
 

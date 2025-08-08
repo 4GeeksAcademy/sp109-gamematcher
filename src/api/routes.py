@@ -561,8 +561,15 @@ def get_games_for_genre(genre_id):
 
 
 @api.route('/user-platform-preferences', methods=['GET'])
-def get_all_user_platform_preferences():
-    preferences = UserPlatformPreference.query.all()
+def get_user_platform_preferences():
+    user_id = request.args.get('user_id', type=int)
+    print(">>> Rebut user_id:", user_id)
+
+    if user_id is not None:
+        preferences = UserPlatformPreference.query.filter_by(user_id=user_id).all()
+    else:
+        preferences = UserPlatformPreference.query.all()
+
     return jsonify([p.serialize() for p in preferences]), 200
 
 
