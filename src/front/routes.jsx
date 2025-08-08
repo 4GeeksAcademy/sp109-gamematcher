@@ -23,6 +23,7 @@ import AdminLoginForm from "./components/AdminLoginForm";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -72,6 +73,11 @@ export const router = createBrowserRouter(
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLoginForm />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+      
+      {/* Ruta de onboarding para usuarios */}
+      <Route path="/onboarding" element={
+        <ProtectedRoute element={Onboarding} roles={["user"]} />
+      } />
     </Route>
   )
 );

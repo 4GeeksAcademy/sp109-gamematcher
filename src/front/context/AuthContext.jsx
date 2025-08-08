@@ -47,6 +47,28 @@ export const AuthProvider = ({ children }) => {
     verifyToken();
   }, []);
 
+  const checkOnboardingStatus = async (userId) => {
+    try {
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/onboarding/status/${userId}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.is_completed;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      return false;
+    }
+  };
+
   const loginUser = async (nickname, password) => {
     try {
       const res = await fetch(`${API_URL}/api/user-login`, {
@@ -72,6 +94,16 @@ export const AuthProvider = ({ children }) => {
         const userData = await verifyRes.json();
         setUser(userData);
         setIsAuthenticated(true);
+        
+        // Solo verificar onboarding para usuarios regulares, no admins
+        if (userData.role === "user") {
+          const onboardingCompleted = await checkOnboardingStatus(userData.id);
+          if (!onboardingCompleted) {
+            navigate("/onboarding");
+            return;
+          }
+        }
+        
         navigate("/");
       } else {
         throw new Error("Error obteniendo datos del usuario");

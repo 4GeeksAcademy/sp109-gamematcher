@@ -41,7 +41,11 @@ const UserPlatformPreferenceList = () => {
         if (!res.ok) throw new Error("Error loading preferences");
         return res.json();
       })
-      .then((data) => setUserPlatformPreferences(data))
+      .then((data) => {
+        console.log('UserPlatformPreferenceList - Preferencias cargadas:', data);
+        console.log('Numero de preferencias:', data.length);
+        setUserPlatformPreferences(data);
+      })
       .catch(() => setUserPlatformPreferences([]));
   }, [formData.user_id]);
 
@@ -68,20 +72,34 @@ const UserPlatformPreferenceList = () => {
     });
 
     if (res.ok) {
+      console.log('Preferencia agregada exitosamente');
       setFormData((form) => ({ ...form, platform_id: "" }));
       // Refrescar llistat
       fetch(`${backendUrl}/api/user-platform-preferences?user_id=${formData.user_id}`)
         .then((res) => res.json())
-        .then((data) => setUserPlatformPreferences(data));
+        .then((data) => {
+          console.log('Preferencias actualizadas despues de agregar:', data);
+          setUserPlatformPreferences(data);
+        });
+    } else {
+      console.log('Error agregando preferencia:', res.status, res.statusText);
     }
   };
 
   const handleDelete = async (id) => {
+    console.log('Intentando eliminar preferencia con ID:', id);
     const res = await fetch(`${backendUrl}/api/user-platform-preferences/${id}`, {
       method: "DELETE",
     });
     if (res.ok) {
-      setUserPlatformPreferences((prefs) => prefs.filter((p) => p.id !== id));
+      console.log('Preferencia eliminada exitosamente');
+      setUserPlatformPreferences((prefs) => {
+        const newPrefs = prefs.filter((p) => p.id !== id);
+        console.log('Preferencias actualizadas despues de eliminar:', newPrefs);
+        return newPrefs;
+      });
+    } else {
+      console.log('Error eliminando preferencia:', res.status, res.statusText);
     }
   };
 

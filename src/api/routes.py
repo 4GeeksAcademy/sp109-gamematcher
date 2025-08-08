@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, UserGameFavorite, UserGenrePreference, NonFavoriteGame
+from api.models import db, User, Game, Genre, Platform, GamePlatform, AdminUser, GameGenre, UserPlatformPreference, UserGameFavorite, UserGenrePreference, NonFavoriteGame, OnboardingProgress
 
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
@@ -57,7 +57,7 @@ def create_game():
     if not data.get("name"):
         raise APIException("Game name is required", status_code=400)
 
-    # Si se proporciona un ID específico (como de RAWG), verificar si ya existe
+    # Si se proporciona un ID específico verificar si ya existe
     if data.get("id"):
         existing_game = Game.query.get(data["id"])
         if existing_game:
@@ -208,9 +208,25 @@ def delete_genre(genre_id):
     if not genre:
         raise APIException("Genre not found", status_code=404)
 
-    db.session.delete(genre)
-    db.session.commit()
-    return jsonify({"message": f"Genre {genre_id} deleted"}), 200
+    try:
+        # Eliminar todas las relaciones del género antes de eliminarlo
+        
+        # Eliminar relaciones game-genre
+        GameGenre.query.filter_by(genre_id=genre_id).delete()
+        
+        # Eliminar preferencias de usuario-género
+        UserGenrePreference.query.filter_by(genre_id=genre_id).delete()
+        
+        # Eliminar el género
+        db.session.delete(genre)
+        db.session.commit()
+        
+        return jsonify({"message": f"Genre {genre_id} and all related data deleted"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        # Log del error para debugging interno
+        raise APIException(f"Error deleting genre: {str(e)}", status_code=500)
 
 # GET all platforms
 
@@ -279,9 +295,25 @@ def delete_platform(platform_id):
     if not platform:
         raise APIException("Platform not found", status_code=404)
 
-    db.session.delete(platform)
-    db.session.commit()
-    return jsonify({"message": f"Platform {platform_id} deleted"}), 200
+    try:
+        # Eliminar todas las relaciones de la plataforma antes de eliminarla
+        
+        # Eliminar relaciones game-platform
+        GamePlatform.query.filter_by(platform_id=platform_id).delete()
+        
+        # Eliminar preferencias de usuario-plataforma
+        UserPlatformPreference.query.filter_by(platform_id=platform_id).delete()
+        
+        # Eliminar la plataforma
+        db.session.delete(platform)
+        db.session.commit()
+        
+        return jsonify({"message": f"Platform {platform_id} and all related data deleted"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        # Log del error para debugging interno
+        raise APIException(f"Error deleting platform: {str(e)}", status_code=500)
 
 
 # GET all users
@@ -351,8 +383,10 @@ def delete_user(user_id):
         raise APIException("User not found", status_code=404)
 
     try:
+        # Eliminar preferencias de plataformas
         UserPlatformPreference.query.filter_by(user_id=user_id).delete()
 
+        # Eliminar preferencias de géneros
         UserGenrePreference.query.filter_by(user_id=user_id).delete()
 
         # Eliminar favoritos del usuario
@@ -361,8 +395,13 @@ def delete_user(user_id):
         for fav in user_favorites:
             db.session.delete(fav)
 
+        # Eliminar no favoritos
         NonFavoriteGame.query.filter_by(user_id=user_id).delete()
 
+        # Eliminar progreso de onboarding
+        OnboardingProgress.query.filter_by(user_id=user_id).delete()
+
+        # Eliminar el usuario
         db.session.delete(user)
         db.session.commit()
 
@@ -585,6 +624,14 @@ def create_user_platform_preference():
     if not user or not platform:
         return jsonify({"error": "Invalid user_id or platform_id"}), 404
 
+    # Verificar si ya existe la preferencia para evitar duplicados
+    existing_preference = UserPlatformPreference.query.filter_by(
+        user_id=user_id, platform_id=platform_id).first()
+    
+    if existing_preference:
+        # Si ya existe, devolver la existente
+        return jsonify(existing_preference.serialize()), 200
+
     new_preference = UserPlatformPreference(
         user_id=user_id, platform_id=platform_id)
     db.session.add(new_preference)
@@ -671,7 +718,8 @@ def create_favorite():
     existing_favorite = UserGameFavorite.query.filter_by(
         user_id=user_id, game_id=game_id).first()
     if existing_favorite:
-        raise APIException("Favorite already exists", 409)
+        # Si ya existe, devolver el existente
+        return jsonify(existing_favorite.serialize()), 200
 
     new_favorite = UserGameFavorite(user_id=user_id, game_id=game_id)
     db.session.add(new_favorite)
@@ -716,6 +764,14 @@ def add_non_favorite():
 
     if not user_id or not game_id:
         return jsonify({"error": "user_id and game_id are required"}), 400
+
+    # Verificar si ya existe para evitar duplicados
+    existing_non_favorite = NonFavoriteGame.query.filter_by(
+        user_id=user_id, game_id=game_id).first()
+    
+    if existing_non_favorite:
+        # Si ya existe, devolver el existente
+        return jsonify(existing_non_favorite.serialize()), 200
 
     relation = NonFavoriteGame(user_id=user_id, game_id=game_id)
     db.session.add(relation)
@@ -823,6 +879,14 @@ def create_user_genre_preference():
 
     if not user or not genre:
         return jsonify({"error": "Invalid user_id or genre_id"}), 404
+
+    # Verificar si ya existe la preferencia para evitar duplicados
+    existing_preference = UserGenrePreference.query.filter_by(
+        user_id=user_id, genre_id=genre_id).first()
+    
+    if existing_preference:
+        # Si ya existe, devolver la existente
+        return jsonify(existing_preference.serialize()), 200
 
     new_preference = UserGenrePreference(user_id=user_id, genre_id=genre_id)
     db.session.add(new_preference)
@@ -1022,4 +1086,83 @@ def get_game_recommendations():
         
     except Exception as e:
         return jsonify({"error": f"Error al generar recomendaciones: {str(e)}"}), 500
+
+
+# Onboarding Routes
+
+@api.route('/onboarding/status/<int:user_id>', methods=['GET'])
+def get_onboarding_status(user_id):
+    """Obtiene el estado del onboarding del usuario"""
+    
+    # Buscar el progreso del onboarding del usuario
+    progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
+    
+    if not progress:
+        # Si no existe, crear uno nuevo
+        progress = OnboardingProgress(user_id=user_id)
+        db.session.add(progress)
+        db.session.commit()
+    
+    return jsonify(progress.serialize()), 200
+
+
+@api.route('/onboarding/update-step', methods=['PUT'])
+def update_onboarding_step():
+    """Actualiza el step actual del onboarding"""
+    data = request.get_json()
+    
+    user_id = data.get("user_id")
+    new_step = data.get("current_step")
+    
+    if not user_id or not new_step:
+        return jsonify({"error": "user_id and current_step are required"}), 400
+    
+    # Buscar el progreso del usuario
+    progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
+    
+    if not progress:
+        return jsonify({"error": "Onboarding progress not found"}), 404
+    
+    # Actualizar el step
+    progress.current_step = new_step
+    db.session.commit()
+    
+    return jsonify(progress.serialize()), 200
+
+
+@api.route('/onboarding/complete', methods=['POST'])
+def complete_onboarding():
+    """Marca el onboarding como completado"""
+    data = request.get_json()
+    
+    user_id = data.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+    
+    # Buscar el progreso del usuario
+    progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
+    
+    if not progress:
+        return jsonify({"error": "Onboarding progress not found"}), 404
+    
+    # Marcar como completado
+    progress.is_completed = True
+    progress.current_step = 4  # Último step
+    db.session.commit()
+    
+    return jsonify(progress.serialize()), 200
+
+
+@api.route('/onboarding/games-sample', methods=['GET'])
+def get_onboarding_games_sample():
+    """Obtiene una muestra de 10 juegos aleatorios para el onboarding"""
+    
+    # Obtener 10 juegos aleatorios ordenados por rating
+    games = Game.query.order_by(Game.rating.desc()).limit(10).all()
+    
+    if not games:
+        return jsonify({"error": "No games available"}), 404
+    
+    return jsonify([game.serialize() for game in games]), 200
 

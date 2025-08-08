@@ -94,6 +94,7 @@ class GamePlatform(db.Model):
             "platform_name": self.platform.name
         }
 
+
 class GameGenre(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     game_id: Mapped[int] = mapped_column(
@@ -117,7 +118,8 @@ class GameGenre(db.Model):
 class AdminUser(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(120), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(200), nullable=False)
 
     def serialize(self):
@@ -126,8 +128,9 @@ class AdminUser(db.Model):
             "name": self.name,
             "email": self.email
         }
-    
+
 # Platform-Preference
+
 
 class UserPlatformPreference(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -204,4 +207,24 @@ class NonFavoriteGame(db.Model):
             "user_id": self.user_id,
             "game_id": self.game_id,
             "game_name": self.game.name
+        }
+
+
+# onboarding
+
+class OnboardingProgress(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        db.ForeignKey('user.id'), nullable=False)
+    current_step: Mapped[int] = mapped_column(default=1)
+    is_completed: Mapped[bool] = mapped_column(default=False)
+
+    user = db.relationship('User', backref='onboarding_progress')
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "current_step": self.current_step,
+            "is_completed": self.is_completed
         }

@@ -33,6 +33,7 @@ const Login = () => {
     setSuccess(null);
 
     try {
+      // 1. Registrar usuario
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -40,13 +41,13 @@ const Login = () => {
       });
 
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.msg || "Error al registrarse");
-      setSuccess("¡Registro exitoso! Ahora puedes iniciar sesión.");
-      setMode("login");
-      setNickname("");
-      setEmail("");
-      setPassword("");
+
+      // 2. Automáticamente hacer login después del registro exitoso
+      await loginUser(nickname, password);
+      
+      // 3. La redirección al onboarding se maneja en AuthContext
+      
     } catch (err) {
       setError(err.message);
     } finally {
