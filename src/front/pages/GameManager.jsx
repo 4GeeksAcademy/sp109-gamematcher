@@ -6,12 +6,15 @@ export const GameManager = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  const [alert, setAlert] = useState(null);
-
-  const showAlert = (type, message) => {
-    setAlert({ type, message });
-  };
+  const [showManualForm, setShowManualForm] = useState(false); // 🔽 INICI: estat per mostrar formulari manual
+  const [manualGame, setManualGame] = useState({
+    name: "",
+    description: "",
+    released: "",
+    background_image: "",
+    rating: ""
+  });
+  const [alertMessage, setAlertMessage] = useState(null); // 🔼 FI
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const rawgApiKey = import.meta.env.VITE_RAWG_API_KEY;
@@ -51,7 +54,7 @@ export const GameManager = () => {
 
   const handleAddGame = async (game) => {
     if (!game.id || !game.name) {
-      showAlert("danger", "Faltan datos del juego.");
+      setAlertMessage("❌ Datos del juego incompletos.");
       return;
     }
 
@@ -61,11 +64,11 @@ export const GameManager = () => {
 
       const payload = {
         name: game.name,
-        description: gameDetail.description_raw || gameDetail.description || "Sin descripción disponible",
+        description: gameDetail.description_raw || "Sin descripción disponible",
         background_image: game.background_image,
         released: game.released,
         rating: game.rating,
-        rawg_id: game.id  // Guardar el ID original de RAWG
+        rawg_id: game.id
       };
 
       const res = await fetch(`${backendUrl}/api/games`, {
@@ -76,15 +79,49 @@ export const GameManager = () => {
 
       if (res.ok) {
         loadGames();
-        showAlert("success", "Juego añadido correctamente.");
+        setAlertMessage("✅ Juego añadido correctamente.");
       } else {
-        showAlert("danger", "Error al añadir juego.");
+        setAlertMessage("❌ Error al añadir juego.");
       }
     } catch (err) {
       console.error("Error al obtener detalles del juego:", err);
-      showAlert("danger", "Error al obtener detalles del juego.");
+      setAlertMessage("❌ Error al obtener detalles del juego.");
     }
   };
+
+  // 🔽 INICI: gestió de formulari de creació manual
+  const handleManualSubmit = async (e) => {
+    e.preventDefault();
+    if (!manualGame.name.trim()) {
+      setAlertMessage("❌ El nombre del juego es obligatorio.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${backendUrl}/api/games`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(manualGame),
+      });
+
+      if (res.ok) {
+        setAlertMessage("✅ Juego creado manualmente.");
+        loadGames();
+        setManualGame({ name: "", description: "", released: "", background_image: "", rating: "" });
+        setShowManualForm(false);
+      } else {
+        setAlertMessage("❌ Error al crear juego manual.");
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      setAlertMessage("❌ Error en la conexión.");
+    }
+  };
+
+  const handleManualChange = (e) => {
+    setManualGame({ ...manualGame, [e.target.name]: e.target.value });
+  };
+  // 🔼 FI
 
   const handleDelete = async (id) => {
     const res = await fetch(`${backendUrl}/api/games/${id}`, { method: "DELETE" });
@@ -95,13 +132,13 @@ export const GameManager = () => {
     <div className="container py-4">
       <h2>Añade juegos a la base de datos</h2>
 
-      {alert && (
+      {alertMessage && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 9999 }}
         >
           <div
-            className={`alert alert-${alert.type} alert-dismissible fade show text-center`}
+            className="alert alert-light alert-dismissible fade show text-center"
             role="alert"
             style={{
               width: "500px",
@@ -113,19 +150,17 @@ export const GameManager = () => {
               position: "relative",
             }}
           >
-            <div className="mb-3">{alert.message}</div>
-
+            <div className="mb-3">{alertMessage}</div>
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setAlert(null)}
+              onClick={() => setAlertMessage(null)}
             >
               Cerrar
             </button>
           </div>
         </div>
       )}
-
       <input
         type="text"
         className="form-control my-3"
@@ -138,6 +173,81 @@ export const GameManager = () => {
         <div className="text-center my-3">
           <div className="spinner-border text-primary" role="status"></div>
         </div>
+      )}
+
+      {searchResults.length === 0 && searchTerm.length >= 3 && (
+        <div className="my-3">
+          <p>No se encontraron juegos con ese nombre.</p>
+          {!showManualForm && (
+            <button
+              className="btn btn-outline-primary"
+              onClick={() => setShowManualForm(true)}
+            >
+              Crear juego manualmente
+            </button>
+          )}
+        </div>
+      )}
+
+      {showManualForm && (
+        <form onSubmit={handleManualSubmit} className="bg-light p-4 rounded shadow-sm mb-4">
+          <h5>Crear juego manual</h5>
+          <div className="mb-3">
+            <label className="form-label">Nombre *</label>
+            <input
+              type="text"
+              name="name"
+              className="form-control"
+              value={manualGame.name}
+              onChange={handleManualChange}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Descripción</label>
+            <textarea
+              name="description"
+              className="form-control"
+              value={manualGame.description}
+              onChange={handleManualChange}
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Fecha de lanzamiento</label>
+            <input
+              type="date"
+              name="released"
+              className="form-control"
+              value={manualGame.released}
+              onChange={handleManualChange}
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Imagen de fondo (URL)</label>
+            <input
+              type="text"
+              name="background_image"
+              className="form-control"
+              value={manualGame.background_image}
+              onChange={handleManualChange}
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Puntuación</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="5"
+              name="rating"
+              className="form-control"
+              value={manualGame.rating}
+              onChange={handleManualChange}
+            />
+          </div>
+          <button type="submit" className="btn btn-success me-2">Crear juego</button>
+          <button type="button" className="btn btn-secondary" onClick={() => setShowManualForm(false)}>Cancelar</button>
+        </form>
       )}
 
       <div className="row">
