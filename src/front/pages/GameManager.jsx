@@ -7,6 +7,12 @@ export const GameManager = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const [alert, setAlert] = useState(null);
+
+  const showAlert = (type, message) => {
+    setAlert({ type, message });
+  };
+
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const rawgApiKey = import.meta.env.VITE_RAWG_API_KEY;
 
@@ -45,12 +51,11 @@ export const GameManager = () => {
 
   const handleAddGame = async (game) => {
     if (!game.id || !game.name) {
-      alert("Datos del juego incompletos.");
+      showAlert("danger", "Faltan datos del juego.");
       return;
     }
 
     try {
-      // Obtener detalles completos del juego desde RAWG
       const detailRes = await fetch(`https://api.rawg.io/api/games/${game.id}?key=${rawgApiKey}`);
       const gameDetail = await detailRes.json();
 
@@ -71,13 +76,13 @@ export const GameManager = () => {
 
       if (res.ok) {
         loadGames();
-        alert("Juego añadido correctamente.");
+        showAlert("success", "Juego añadido correctamente.");
       } else {
-        alert("Error al añadir juego.");
+        showAlert("danger", "Error al añadir juego.");
       }
     } catch (err) {
       console.error("Error al obtener detalles del juego:", err);
-      alert("Error al obtener detalles del juego.");
+      showAlert("danger", "Error al obtener detalles del juego.");
     }
   };
 
@@ -89,6 +94,37 @@ export const GameManager = () => {
   return (
     <div className="container py-4">
       <h2>Añade juegos a la base de datos</h2>
+
+      {alert && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 9999 }}
+        >
+          <div
+            className={`alert alert-${alert.type} alert-dismissible fade show text-center`}
+            role="alert"
+            style={{
+              width: "500px",
+              maxWidth: "90vw",
+              padding: "2.5rem 2rem",
+              fontSize: "1.5rem",
+              backgroundColor: "white",
+              boxShadow: "0 0 20px rgba(0,0,0,0.3)",
+              position: "relative",
+            }}
+          >
+            <div className="mb-3">{alert.message}</div>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setAlert(null)}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
 
       <input
         type="text"
