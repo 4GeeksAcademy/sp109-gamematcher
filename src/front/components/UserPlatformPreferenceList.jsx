@@ -78,17 +78,26 @@ const UserPlatformPreferenceList = () => {
     });
 
     if (res.ok) {
+      console.log('Preferencia agregada exitosamente');
       setFormData((form) => ({ ...form, platform_id: "" }));
       loadPreferences(userId);
     }
   };
 
   const handleDelete = async (id) => {
+    console.log('Intentando eliminar preferencia con ID:', id);
     const res = await fetch(`${backendUrl}/api/user-platform-preferences/${id}`, {
       method: "DELETE",
     });
     if (res.ok) {
-      setUserPlatformPreferences((prefs) => prefs.filter((p) => p.id !== id));
+      console.log('Preferencia eliminada exitosamente');
+      setUserPlatformPreferences((prefs) => {
+        const newPrefs = prefs.filter((p) => p.id !== id);
+        console.log('Preferencias actualizadas despues de eliminar:', newPrefs);
+        return newPrefs;
+      });
+    } else {
+      console.log('Error eliminando preferencia:', res.status, res.statusText);
     }
   };
 
