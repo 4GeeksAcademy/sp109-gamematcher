@@ -8,18 +8,49 @@ const OnboardingStep3 = ({
 }) => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const REQUIRED_FAVORITES = 3;
+  const rawgApiKey = import.meta.env.VITE_RAWG_API_KEY;
 
   // Cargar juegos de muestra para el onboarding
   useEffect(() => {
     loadGames();
   }, []);
 
+  // Buscador de juegos en RAWG
+  useEffect(() => {
+    const searchRawgGames = async () => {
+      if (searchTerm.length < 3) {
+        setSearchResults([]);
+        return;
+      }
+
+      setSearchLoading(true);
+      try {
+        const response = await fetch(
+          `https://api.rawg.io/api/games?search=${searchTerm}&key=${rawgApiKey}`
+        );
+        const data = await response.json();
+        setSearchResults(data.results || []);
+      } catch (error) {
+        console.error("Error searching games:", error);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const delaySearch = setTimeout(searchRawgGames, 500);
+    return () => clearTimeout(delaySearch);
+  }, [searchTerm, rawgApiKey]);
+
   const loadGames = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/onboarding/games-sample`
+        `${import.meta.env.VITE_BACKEND_URL}/api/onboarding/games-sample?limit=12`
       );
       const data = await response.json();
       setGames(data);
@@ -38,6 +69,11 @@ const OnboardingStep3 = ({
         setSelectedFavorites([...selectedFavorites, gameId]);
       }
     }
+  };
+
+  // Función para determinar qué juegos mostrar
+  const getGamesToShow = () => {
+    return searchTerm.length >= 3 ? searchResults : games;
   };
 
   const handleNext = () => {
@@ -103,9 +139,28 @@ const OnboardingStep3 = ({
               </div>
             </div>
 
+            {/* Buscador de juegos */}
+            <div className="mb-4">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Buscar juegos adicionales..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchLoading && (
+                <div className="text-center mt-2">
+                  <small className="text-muted">
+                    <i className="fas fa-spinner fa-spin me-1"></i>
+                    Buscando...
+                  </small>
+                </div>
+              )}
+            </div>
+
             {/* Grid de juegos */}
             <div className="row g-3 mb-4">
-              {games.map((game) => (
+              {getGamesToShow().map((game) => (
                 <div key={game.id} className="col-md-6 col-lg-4 col-xl-3">
                   <div
                     className={`card h-100 border-2 cursor-pointer game-card ${

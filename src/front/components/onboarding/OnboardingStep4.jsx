@@ -1,40 +1,79 @@
 import React, { useState, useEffect } from 'react';
 
 const OnboardingStep4 = ({ selectedNonFavorites, setSelectedNonFavorites, onComplete, onPrev, loading }) => {
-  const [games, setGames] = useState([]);
-  const [loadingGames, setLoadingGames] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedGamesVisual, setSelectedGamesVisual] = useState([]);
 
   const REQUIRED_NON_FAVORITES = 3;
+  const rawgApiKey = import.meta.env.VITE_RAWG_API_KEY;
 
-  // Cargar juegos de muestra para el onboarding
+  // Buscador de juegos en RAWG
   useEffect(() => {
-    loadGames();
-  }, []);
+    const searchRawgGames = async () => {
+      if (searchTerm.length < 3) {
+        setSearchResults([]);
+        return;
+      }
 
-  const loadGames = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/onboarding/games-sample`);
-      const data = await response.json();
-      setGames(data);
-    } catch (error) {
-      console.error('Error loading games:', error);
-    } finally {
-      setLoadingGames(false);
-    }
-  };
+      setSearchLoading(true);
+      try {
+        const response = await fetch(
+          `https://api.rawg.io/api/games?search=${searchTerm}&key=${rawgApiKey}`
+        );
+        const data = await response.json();
+        setSearchResults(data.results || []);
+      } catch (error) {
+        console.error("Error searching games:", error);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
 
-  const handleGameToggle = (gameId) => {
-    if (selectedNonFavorites.includes(gameId)) {
-      setSelectedNonFavorites(selectedNonFavorites.filter(id => id !== gameId));
+    const delaySearch = setTimeout(searchRawgGames, 500);
+    return () => clearTimeout(delaySearch);
+  }, [searchTerm, rawgApiKey]);
+
+  const handleGameToggle = async (game) => {
+    const isSelected = selectedGamesVisual.some(g => g.name === game.name);
+
+    if (isSelected) {
+      // Remover del visual y del array de IDs
+      setSelectedGamesVisual(selectedGamesVisual.filter(g => g.name !== game.name));
+      setSelectedNonFavorites(selectedNonFavorites.slice(0, -1));
     } else {
-      if (selectedNonFavorites.length < REQUIRED_NON_FAVORITES) {
-        setSelectedNonFavorites([...selectedNonFavorites, gameId]);
+      if (selectedGamesVisual.length < REQUIRED_NON_FAVORITES) {
+        try {
+          // Guardar en la base de datos
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/games`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: game.name,
+              description: game.description_raw || "Sin descripción",
+              background_image: game.background_image,
+              released: game.released,
+              rating: game.rating,
+              rawg_id: game.id
+            })
+          });
+
+          if (response.ok) {
+            const gameData = await response.json();
+            setSelectedGamesVisual([...selectedGamesVisual, { name: game.name }]);
+            setSelectedNonFavorites([...selectedNonFavorites, gameData.id]);
+          }
+        } catch (error) {
+          console.error('Error:', error);
+        }
       }
     }
   };
 
   const handleComplete = () => {
-    if (selectedNonFavorites.length !== REQUIRED_NON_FAVORITES) {
+    if (selectedGamesVisual.length !== REQUIRED_NON_FAVORITES) {
       alert(`Por favor selecciona exactamente ${REQUIRED_NON_FAVORITES} juegos que NO te gusten`);
       return;
     }
@@ -42,17 +81,8 @@ const OnboardingStep4 = ({ selectedNonFavorites, setSelectedNonFavorites, onComp
   };
 
   const getRemainingSelections = () => {
-    return REQUIRED_NON_FAVORITES - selectedNonFavorites.length;
+    return REQUIRED_NON_FAVORITES - selectedGamesVisual.length;
   };
-
-  if (loadingGames) {
-    return (
-      <div className="text-center py-5">
-        <i className="fas fa-spinner fa-spin fa-3x mb-3 text-primary"></i>
-        <p>Cargando juegos...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="row justify-content-center">
@@ -75,7 +105,7 @@ const OnboardingStep4 = ({ selectedNonFavorites, setSelectedNonFavorites, onComp
             <div className="text-center mb-4">
               <div className="d-inline-block">
                 <span className="badge bg-danger fs-6 px-3 py-2">
-                  {selectedNonFavorites.length} de {REQUIRED_NON_FAVORITES} seleccionados
+                  {selectedGamesVisual.length} de {REQUIRED_NON_FAVORITES} seleccionados
                 </span>
                 {getRemainingSelections() > 0 && (
                   <small className="d-block text-muted mt-2">
@@ -91,69 +121,107 @@ const OnboardingStep4 = ({ selectedNonFavorites, setSelectedNonFavorites, onComp
               </div>
             </div>
 
-            {/* Grid de juegos */}
-            <div className="row g-3 mb-4">
-              {games.map((game) => (
-                <div key={game.id} className="col-md-6 col-lg-4 col-xl-3">
-                  <div
-                    className={`card h-100 border-2 cursor-pointer game-card ${selectedNonFavorites.includes(game.id)
-                      ? 'border-danger bg-danger text-white'
-                      : 'border-light'
-                      } ${selectedNonFavorites.length >= REQUIRED_NON_FAVORITES &&
-                        !selectedNonFavorites.includes(game.id)
-                        ? 'opacity-50'
-                        : ''
-                      }`}
-                    onClick={() => handleGameToggle(game.id)}
-                    style={{
-                      cursor: selectedNonFavorites.length >= REQUIRED_NON_FAVORITES &&
-                        !selectedNonFavorites.includes(game.id)
-                        ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    <div className="card-body p-3">
-                      {/* Imagen del juego */}
-                      {game.background_image && (
-                        <div className="mb-2">
-                          <img
-                            src={game.background_image}
-                            alt={game.name}
-                            className="img-fluid rounded"
-                            style={{
-                              width: '100%',
-                              height: '120px',
-                              objectFit: 'cover'
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Información del juego */}
-                      <h6 className="card-title mb-2 small fw-bold">{game.name}</h6>
-
-                      {game.rating && (
-                        <div className="mb-2">
-                          <small className={selectedNonFavorites.includes(game.id) ? 'text-light' : 'text-muted'}>
-                            <i className="fas fa-star text-warning me-1"></i>
-                            {game.rating}
-                          </small>
-                        </div>
-                      )}
-
-                      {selectedNonFavorites.includes(game.id) && (
-                        <div className="text-center">
-                          <i className="fas fa-times-circle fa-2x text-white"></i>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            {/* Buscador de juegos */}
+            <div className="mb-4">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Buscar juegos que NO te gusten..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchLoading && (
+                <div className="text-center mt-2">
+                  <small className="text-muted">
+                    <i className="fas fa-spinner fa-spin me-1"></i>
+                    Buscando...
+                  </small>
                 </div>
-              ))}
+              )}
             </div>
 
+            {/* Lista de juegos seleccionados */}
+            {/* {selectedGamesVisual.length > 0 && (
+              <div className="mb-4">
+                <h6>Juegos NO favoritos seleccionados:</h6>
+                <div className="d-flex flex-wrap gap-2">
+                  {selectedGamesVisual.map((game, index) => (
+                    <span key={index} className="badge bg-danger fs-6 px-2 py-2">
+                      {game.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )} */}
+
+            {/* Grid de juegos */}
+            {searchResults.length > 0 && (
+              <div className="row g-3 mb-4">
+                {searchResults.map((game) => {
+                  const isSelected = selectedGamesVisual.some(g => g.name === game.name);
+                  return (
+                    <div key={game.id} className="col-md-6 col-lg-4 col-xl-3">
+                      <div
+                        className={`card h-100 border-2 cursor-pointer game-card ${isSelected
+                          ? 'border-danger bg-danger text-white'
+                          : 'border-light'
+                          } ${selectedGamesVisual.length >= REQUIRED_NON_FAVORITES &&
+                            !isSelected
+                            ? 'opacity-50'
+                            : ''
+                          }`}
+                        onClick={() => handleGameToggle(game)}
+                        style={{
+                          cursor: selectedGamesVisual.length >= REQUIRED_NON_FAVORITES &&
+                            !isSelected
+                            ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        <div className="card-body p-3">
+                          {/* Imagen del juego */}
+                          {game.background_image && (
+                            <div className="mb-2">
+                              <img
+                                src={game.background_image}
+                                alt={game.name}
+                                className="img-fluid rounded"
+                                style={{
+                                  width: '100%',
+                                  height: '120px',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          {/* Información del juego */}
+                          <h6 className="card-title mb-2 small fw-bold">{game.name}</h6>
+
+                          {game.rating && (
+                            <div className="mb-2">
+                              <small className={isSelected ? 'text-light' : 'text-muted'}>
+                                <i className="fas fa-star text-warning me-1"></i>
+                                {game.rating}
+                              </small>
+                            </div>
+                          )}
+
+                          {isSelected && (
+                            <div className="text-center">
+                              <i className="fas fa-times-circle fa-2x text-white"></i>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Mensaje de finalización */}
-            {selectedNonFavorites.length === REQUIRED_NON_FAVORITES && (
+            {selectedGamesVisual.length === REQUIRED_NON_FAVORITES && (
               <div className="alert alert-success text-center mb-4">
                 <i className="fas fa-check-circle fa-2x mb-2"></i>
                 <h5>¡Casi terminamos!</h5>
@@ -177,7 +245,7 @@ const OnboardingStep4 = ({ selectedNonFavorites, setSelectedNonFavorites, onComp
               <button
                 className="btn btn-success btn-lg px-4"
                 onClick={handleComplete}
-                disabled={selectedNonFavorites.length !== REQUIRED_NON_FAVORITES || loading}
+                disabled={selectedGamesVisual.length !== REQUIRED_NON_FAVORITES || loading}
               >
                 {loading ? (
                   <>

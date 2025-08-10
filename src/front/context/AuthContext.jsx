@@ -8,6 +8,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null); // { email, role, ... }
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true); // Por defecto true, se cambia a false si es necesario
   const navigate = useNavigate();
 
   // Verificar si hay sesión activa al cargar
@@ -60,11 +61,15 @@ export const AuthProvider = ({ children }) => {
       
       if (response.ok) {
         const data = await response.json();
-        return data.is_completed;
+        const completed = data.is_completed;
+        setOnboardingCompleted(completed);
+        return completed;
       }
+      setOnboardingCompleted(false);
       return false;
     } catch (error) {
       console.error('Error checking onboarding status:', error);
+      setOnboardingCompleted(false);
       return false;
     }
   };
@@ -155,11 +160,20 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.removeItem("token");
     setUser(null);
     setIsAuthenticated(false);
+    setOnboardingCompleted(true); // Reset onboarding state
     navigate("/");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loginUser, loginAdmin, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated, 
+      onboardingCompleted, 
+      loginUser, 
+      loginAdmin, 
+      logout,
+      checkOnboardingStatus 
+    }}>
       {children}
     </AuthContext.Provider>
   );

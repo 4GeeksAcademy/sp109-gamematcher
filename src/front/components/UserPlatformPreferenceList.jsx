@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Trash3 } from "react-bootstrap-icons";
 import { useAuth } from "../context/AuthContext";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -187,7 +186,7 @@ const UserPlatformPreferenceList = () => {
                     onClick={() => handleDelete(pref.id)}
                     type="button"
                   >
-                    <Trash3 />
+                    <i className="fas fa-trash"></i>
                   </button>
                 </td>
               </tr>

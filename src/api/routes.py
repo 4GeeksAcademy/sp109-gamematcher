@@ -57,6 +57,13 @@ def create_game():
     if not data.get("name"):
         raise APIException("Game name is required", status_code=400)
 
+    # Si se proporciona un rawg_id, verificar si ya existe un juego con ese rawg_id
+    if data.get("rawg_id"):
+        existing_game = Game.query.filter_by(rawg_id=data["rawg_id"]).first()
+        if existing_game:
+            # Si el juego ya existe, devolvemos el existente
+            return jsonify(existing_game.serialize()), 200
+
     # Si se proporciona un ID específico verificar si ya existe
     if data.get("id"):
         existing_game = Game.query.get(data["id"])
@@ -93,6 +100,11 @@ def create_game():
     except Exception as e:
         db.session.rollback()
         # Si hay un error de duplicado, intentar buscar el juego existente
+        if data.get("rawg_id"):
+            existing_game = Game.query.filter_by(
+                rawg_id=data["rawg_id"]).first()
+            if existing_game:
+                return jsonify(existing_game.serialize()), 200
         if data.get("id"):
             existing_game = Game.query.get(data["id"])
             if existing_game:
@@ -210,19 +222,19 @@ def delete_genre(genre_id):
 
     try:
         # Eliminar todas las relaciones del género antes de eliminarlo
-        
+
         # Eliminar relaciones game-genre
         GameGenre.query.filter_by(genre_id=genre_id).delete()
-        
+
         # Eliminar preferencias de usuario-género
         UserGenrePreference.query.filter_by(genre_id=genre_id).delete()
-        
+
         # Eliminar el género
         db.session.delete(genre)
         db.session.commit()
-        
+
         return jsonify({"message": f"Genre {genre_id} and all related data deleted"}), 200
-        
+
     except Exception as e:
         db.session.rollback()
         # Log del error para debugging interno
@@ -297,23 +309,25 @@ def delete_platform(platform_id):
 
     try:
         # Eliminar todas las relaciones de la plataforma antes de eliminarla
-        
+
         # Eliminar relaciones game-platform
         GamePlatform.query.filter_by(platform_id=platform_id).delete()
-        
+
         # Eliminar preferencias de usuario-plataforma
-        UserPlatformPreference.query.filter_by(platform_id=platform_id).delete()
-        
+        UserPlatformPreference.query.filter_by(
+            platform_id=platform_id).delete()
+
         # Eliminar la plataforma
         db.session.delete(platform)
         db.session.commit()
-        
+
         return jsonify({"message": f"Platform {platform_id} and all related data deleted"}), 200
-        
+
     except Exception as e:
         db.session.rollback()
         # Log del error para debugging interno
-        raise APIException(f"Error deleting platform: {str(e)}", status_code=500)
+        raise APIException(
+            f"Error deleting platform: {str(e)}", status_code=500)
 
 
 # GET all users
@@ -605,7 +619,8 @@ def get_user_platform_preferences():
     print(">>> Rebut user_id:", user_id)
 
     if user_id is not None:
-        preferences = UserPlatformPreference.query.filter_by(user_id=user_id).all()
+        preferences = UserPlatformPreference.query.filter_by(
+            user_id=user_id).all()
     else:
         preferences = UserPlatformPreference.query.all()
 
@@ -634,7 +649,7 @@ def create_user_platform_preference():
     # Verificar si ya existe la preferencia para evitar duplicados
     existing_preference = UserPlatformPreference.query.filter_by(
         user_id=user_id, platform_id=platform_id).first()
-    
+
     if existing_preference:
         # Si ya existe, devolver la existente
         return jsonify(existing_preference.serialize()), 200
@@ -775,7 +790,7 @@ def add_non_favorite():
     # Verificar si ya existe para evitar duplicados
     existing_non_favorite = NonFavoriteGame.query.filter_by(
         user_id=user_id, game_id=game_id).first()
-    
+
     if existing_non_favorite:
         # Si ya existe, devolver el existente
         return jsonify(existing_non_favorite.serialize()), 200
@@ -853,13 +868,16 @@ def get_all_user_genre_preferences():
     user_id = request.args.get('user_id', type=int)
 
     if user_id is not None:
-        preferences = UserGenrePreference.query.filter_by(user_id=user_id).all()
+        preferences = UserGenrePreference.query.filter_by(
+            user_id=user_id).all()
     else:
         preferences = UserGenrePreference.query.all()
 
     return jsonify([p.serialize() for p in preferences]), 200
 
 # GET one user-genre preference by ID
+
+
 @api.route('/user-genre-preferences/<int:id>', methods=['GET'])
 def get_user_genre_preference(id):
     preference = UserGenrePreference.query.get(id)
@@ -890,7 +908,7 @@ def create_user_genre_preference():
     # Verificar si ya existe la preferencia para evitar duplicados
     existing_preference = UserGenrePreference.query.filter_by(
         user_id=user_id, genre_id=genre_id).first()
-    
+
     if existing_preference:
         # Si ya existe, devolver la existente
         return jsonify(existing_preference.serialize()), 200
@@ -1038,61 +1056,110 @@ def get_user_excluded_games(user_id):
     return excluded_game_ids
 
 
+def get_user_excluded_rawg_games(user_id):
+    """Obtiene IDs de RAWG de juegos que el usuario ya evaluó (favoritos + no-favoritos)"""
+
+    try:
+        excluded_rawg_ids = []
+
+        # Obtener favoritos con rawg_id
+        favorites = db.session.execute(
+            select(Game.rawg_id).select_from(
+                UserGameFavorite.__table__.join(Game.__table__)
+            ).where(
+                UserGameFavorite.user_id == user_id,
+                Game.rawg_id.isnot(None)
+            )
+        ).scalars().all()
+
+        excluded_rawg_ids.extend([fav for fav in favorites if fav])
+
+        # Obtener no-favoritos con rawg_id
+        non_favorites = db.session.execute(
+            select(Game.rawg_id).select_from(
+                NonFavoriteGame.__table__.join(Game.__table__)
+            ).where(
+                NonFavoriteGame.user_id == user_id,
+                Game.rawg_id.isnot(None)
+            )
+        ).scalars().all()
+
+        excluded_rawg_ids.extend(
+            [non_fav for non_fav in non_favorites if non_fav])
+
+        # Eliminar duplicados
+        excluded_rawg_ids = list(set(excluded_rawg_ids))
+
+        print(
+            f"🔍 Usuario {user_id}: {len(excluded_rawg_ids)} juegos excluidos por RAWG ID")
+        print(f"📋 IDs excluidos: {excluded_rawg_ids}")
+
+        return excluded_rawg_ids
+
+    except Exception as e:
+        print(f"❌ Error obteniendo juegos excluidos: {e}")
+        return []
+
+
 @api.route('/games/recommendations', methods=['GET'])
 @jwt_required()
 def get_game_recommendations():
-    """Obtiene recomendaciones personalizadas de juegos para el usuario autenticado"""
-    
+    """Obtiene las preferencias del usuario para generar recomendaciones desde RAWG en el frontend"""
+
     try:
         # Obtener el usuario autenticado
         current_user_identity = get_jwt_identity()
         user = db.session.execute(select(User).where(
             User.nickname == current_user_identity)).scalar_one_or_none()
-        
+
         if not user:
             return jsonify({"error": "Usuario no encontrado"}), 404
-        
+
+        print(
+            f"🔍 Obteniendo recomendaciones para usuario: {user.nickname} (ID: {user.id})")
+
         # Obtener preferencias del usuario
-        preferred_genre_ids, preferred_platform_ids = get_user_preferences(user.id)
-        
-        # Obtener juegos que ya evaluó el usuario (para excluir)
-        excluded_game_ids = get_user_excluded_games(user.id)
-        
-        # Construir query base de juegos
-        query = Game.query
-        
-        # Excluir juegos ya evaluados
-        if excluded_game_ids:
-            query = query.filter(~Game.id.in_(excluded_game_ids))
-        
-        # Filtrar por géneros preferidos si los tiene
+        preferred_genre_ids, preferred_platform_ids = get_user_preferences(
+            user.id)
+        excluded_rawg_ids = get_user_excluded_rawg_games(user.id)
+
+        print(
+            f"📊 Preferencias encontradas - Géneros: {len(preferred_genre_ids)}, Plataformas: {len(preferred_platform_ids)}")
+
+        # Convertir IDs de géneros a nombres para RAWG
+        preferred_genres = []
         if preferred_genre_ids:
-            query = query.join(GameGenre).filter(GameGenre.genre_id.in_(preferred_genre_ids))
-        
-        # Filtrar por plataformas preferidas si las tiene
+            genres = db.session.execute(
+                select(Genre).where(Genre.id.in_(preferred_genre_ids))
+            ).scalars().all()
+            preferred_genres = [genre.name.lower() for genre in genres]
+            print(f"🏷️ Géneros convertidos: {preferred_genres}")
+
+        # Convertir IDs de plataformas a nombres para RAWG
+        preferred_platforms = []
         if preferred_platform_ids:
-            query = query.join(GamePlatform).filter(GamePlatform.platform_id.in_(preferred_platform_ids))
-        
-        # Ordenar por rating descendente y limitar a 25 juegos
-        recommended_games = query.order_by(Game.rating.desc()).limit(25).all()
-        
-        # Si no hay suficientes juegos con las preferencias, completar con juegos generales
-        if len(recommended_games) < 25:
-            remaining_slots = 25 - len(recommended_games)
-            recommended_game_ids = [game.id for game in recommended_games]
-            excluded_game_ids.extend(recommended_game_ids)
-            
-            # Obtener juegos adicionales sin filtros de preferencia
-            additional_games = Game.query.filter(
-                ~Game.id.in_(excluded_game_ids)
-            ).order_by(Game.rating.desc()).limit(remaining_slots).all()
-            
-            recommended_games.extend(additional_games)
-        
-        return jsonify([game.serialize() for game in recommended_games]), 200
-        
+            platforms = db.session.execute(
+                select(Platform).where(Platform.id.in_(preferred_platform_ids))
+            ).scalars().all()
+            preferred_platforms = [platform.name for platform in platforms]
+            print(f"🎮 Plataformas convertidas: {preferred_platforms}")
+
+        response_data = {
+            "user_id": user.id,
+            "preferred_genres": preferred_genres,
+            "preferred_platforms": preferred_platforms,
+            "excluded_rawg_ids": excluded_rawg_ids,
+            "use_rawg": True  # Indicar al frontend que use RAWG API
+        }
+
+        print(f"📤 Enviando datos al frontend: {response_data}")
+
+        # Retornar datos para que el frontend haga las peticiones a RAWG
+        return jsonify(response_data), 200
+
     except Exception as e:
-        return jsonify({"error": f"Error al generar recomendaciones: {str(e)}"}), 500
+        print(f"❌ Error al obtener preferencias: {str(e)}")
+        return jsonify({"error": f"Error al obtener preferencias: {str(e)}"}), 500
 
 
 # Onboarding Routes
@@ -1100,16 +1167,16 @@ def get_game_recommendations():
 @api.route('/onboarding/status/<int:user_id>', methods=['GET'])
 def get_onboarding_status(user_id):
     """Obtiene el estado del onboarding del usuario"""
-    
+
     # Buscar el progreso del onboarding del usuario
     progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
-    
+
     if not progress:
         # Si no existe, crear uno nuevo
         progress = OnboardingProgress(user_id=user_id)
         db.session.add(progress)
         db.session.commit()
-    
+
     return jsonify(progress.serialize()), 200
 
 
@@ -1117,23 +1184,23 @@ def get_onboarding_status(user_id):
 def update_onboarding_step():
     """Actualiza el step actual del onboarding"""
     data = request.get_json()
-    
+
     user_id = data.get("user_id")
     new_step = data.get("current_step")
-    
+
     if not user_id or not new_step:
         return jsonify({"error": "user_id and current_step are required"}), 400
-    
+
     # Buscar el progreso del usuario
     progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
-    
+
     if not progress:
         return jsonify({"error": "Onboarding progress not found"}), 404
-    
+
     # Actualizar el step
     progress.current_step = new_step
     db.session.commit()
-    
+
     return jsonify(progress.serialize()), 200
 
 
@@ -1141,35 +1208,37 @@ def update_onboarding_step():
 def complete_onboarding():
     """Marca el onboarding como completado"""
     data = request.get_json()
-    
+
     user_id = data.get("user_id")
-    
+
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
-    
+
     # Buscar el progreso del usuario
     progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
-    
+
     if not progress:
         return jsonify({"error": "Onboarding progress not found"}), 404
-    
+
     # Marcar como completado
     progress.is_completed = True
     progress.current_step = 4  # Último step
     db.session.commit()
-    
+
     return jsonify(progress.serialize()), 200
 
 
 @api.route('/onboarding/games-sample', methods=['GET'])
 def get_onboarding_games_sample():
-    """Obtiene una muestra de 10 juegos aleatorios para el onboarding"""
-    
-    # Obtener 10 juegos aleatorios ordenados por rating
-    games = Game.query.order_by(Game.rating.desc()).limit(10).all()
-    
+    """Obtiene una muestra de juegos aleatorios para el onboarding"""
+
+    # Obtener el límite de juegos desde query params, por defecto 12
+    limit = request.args.get('limit', 12, type=int)
+
+    # Obtener juegos aleatorios ordenados por rating
+    games = Game.query.order_by(Game.rating.desc()).limit(limit).all()
+
     if not games:
         return jsonify({"error": "No games available"}), 404
-    
-    return jsonify([game.serialize() for game in games]), 200
 
+    return jsonify([game.serialize() for game in games]), 200
