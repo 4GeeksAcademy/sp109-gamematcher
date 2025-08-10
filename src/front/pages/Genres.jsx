@@ -96,7 +96,7 @@ export const Genres = () => {
                 style={{ width: "40px", height: "40px" }}
                 onClick={() => handleDelete(genre.id)}
               >
-                <i className="fa-solid fa-trash"></i>
+                <i className="fas fa-trash"></i>
               </button>
             </div>
           </li>

@@ -167,7 +167,7 @@ const UserGenrePreferenceList = () => {
                     onClick={() => handleDelete(assoc.id)}
                     type="button"
                   >
-                    🗑️
+                    <i className="fas fa-trash"></i>
                   </button>
                 </td>
               </tr>

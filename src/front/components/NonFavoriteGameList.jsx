@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Trash3 } from "react-bootstrap-icons";
 import { useAuth } from "../context/AuthContext";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -129,7 +128,7 @@ const NonFavoriteGameList = () => {
                     className="btn btn-outline-danger btn-sm"
                     onClick={() => handleDelete(rel.id)}
                   >
-                    <Trash3 />
+                    <i className="fas fa-trash"></i>
                   </button>
                 </li>
               ))
