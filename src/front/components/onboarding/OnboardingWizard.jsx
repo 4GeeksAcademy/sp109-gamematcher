@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import OnboardingStep1 from './OnboardingStep1';
 import OnboardingStep2 from './OnboardingStep2';
 import OnboardingStep3 from './OnboardingStep3';
 import OnboardingStep4 from './OnboardingStep4';
 
 const OnboardingWizard = () => {
-  const { user } = useAuth();
+  const { user, checkOnboardingStatus } = useAuth();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -17,11 +19,6 @@ const OnboardingWizard = () => {
   const [selectedNonFavorites, setSelectedNonFavorites] = useState([]);
 
   const totalSteps = 4;
-
-  // Debug: Log cuando cambian las plataformas seleccionadas
-  useEffect(() => {
-    console.log('OnboardingWizard - plataformas seleccionadas cambiaron:', selectedPlatforms);
-  }, [selectedPlatforms]);
 
   // Cargar el progreso del onboarding al montar el componente
   useEffect(() => {
@@ -154,8 +151,9 @@ const OnboardingWizard = () => {
         });
       }
 
-      // Redirigir a la página principal
-      window.location.href = '/';
+      // Redirigir a las recomendaciones después de completar onboarding
+      await checkOnboardingStatus(user.id); // Actualizar estado en el AuthContext
+      navigate('/recommendations'); // Redirigir a recomendaciones
     } catch (error) {
       console.error('Error completing onboarding:', error);
       alert('Hubo un error guardando tus preferencias. Por favor, inténtalo de nuevo.');

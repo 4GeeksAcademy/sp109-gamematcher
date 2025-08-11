@@ -1,15 +1,22 @@
-import { useParams, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export const RawgGameDetail = () => {
-  //Utilizamos useParams para obtener el ID del juego de la URL
   const { id } = useParams();
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user, isAuthenticated } = useAuth();
+  const [adding, setAdding] = useState(false);
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  useEffect(() => {
+    fetchGameDetail();
+  }, [id]);
 
   const [platformNames, setPlatformNames] = useState([]);
   const [genreNames, setGenreNames] = useState([]);
@@ -17,11 +24,11 @@ export const RawgGameDetail = () => {
   const fetchGameDetail = async () => {
     try {
       setLoading(true);
-      // Obtener detalles del juego desde la base de datos local
-      const res = await fetch(`${backendUrl}/api/games/${id}`);
+      setError(null);
 
+      const res = await fetch(`${backendUrl}/api/games/${id}`);
       if (!res.ok) {
-        throw new Error('Juego no encontrado');
+        throw new Error("Juego no encontrado en la base de datos");
       }
 
       const data = await res.json();
@@ -39,15 +46,13 @@ export const RawgGameDetail = () => {
         setPlatformNames(platData.map(p => p.platform_name).filter(Boolean));
         setGenreNames(genData.map(g => g.genre_name).filter(Boolean));
       } catch (e) {
-        // Si falla alguna crida relacionada, no trenquem la pàgina
         console.warn("No se pudieron cargar plataformas/géneros relacionados:", e);
         setPlatformNames([]);
         setGenreNames([]);
       }
-      // 🔼 FI CANVIS
 
     } catch (err) {
-      console.error("Error fetching game detail:", err);
+      console.error("Error al cargar juego:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -88,83 +93,185 @@ export const RawgGameDetail = () => {
   }
 
   const handleAddFavorite = async () => {
-    // Verificar si el usuario está autenticado
-    if (!isAuthenticated || !user) {
-      alert("❌ Debes iniciar sesión para añadir juegos a favoritos.");
-      return;
-    }
-
-    // Solo usuarios regulares pueden añadir favoritos (no admins)
-    if (user.role !== "user") {
-      alert("❌ Solo los usuarios pueden añadir juegos a favoritos.");
+    if (!user) {
+      alert("Debes iniciar sesión para añadir favoritos");
       return;
     }
 
     try {
-      const token = sessionStorage.getItem("access_token");
+      setAdding(true);
 
-      const favResponse = await fetch(`${backendUrl}/api/favorites`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          user_id: user.id,
-          game_id: game.id,
-        }),
-      });
+      // Crear el juego en la base de datos local
+      const createGameResponse = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/games`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            name: game.name,
+            description: game.description.slice(0, 500),
+            image_url: game.background_image,
+            rating: game.rating,
+            rawg_id: game.rawg_id,
+            release_date: game.released,
+          }),
+        }
+      );
 
-      if (favResponse.ok) {
-        alert("✅ Añadido a favoritos correctamente.");
-      } else {
-        const favError = await favResponse.json();
-        console.error("Error adding favorite:", favError);
-        alert("Error al añadir a favoritos: " + favError.message);
+      if (!createGameResponse.ok) {
+        const errorData = await createGameResponse.json();
+        throw new Error(errorData.error || "Error al crear el juego");
       }
+
+      const createdGame = await createGameResponse.json();
+
+      // Añadir a favoritos
+      const favoriteResponse = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/favorites`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            user_id: user.id,
+            game_id: createdGame.id,
+          }),
+        }
+      );
+
+      if (!favoriteResponse.ok) {
+        const errorData = await favoriteResponse.json();
+        throw new Error(errorData.error || "Error al añadir a favoritos");
+      }
+
+      alert("¡Juego añadido a favoritos!");
     } catch (err) {
       console.error("Error al añadir favorito:", err);
-      alert("Error en la conexión con el servidor.");
+      alert(`Error: ${err.message}`);
+    } finally {
+      setAdding(false);
     }
   };
 
+
+
+  if (loading) {
+    return (
+      <div className="container mt-4">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+          <p className="mt-2">Cargando detalles del juego...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-danger" role="alert">
+          <h4>Error</h4>
+          <p>{error}</p>
+          <button className="btn btn-secondary" onClick={() => navigate(-1)}>
+            Volver
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!game) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-warning" role="alert">
+          <h4>Juego no encontrado</h4>
+          <button className="btn btn-secondary" onClick={() => navigate(-1)}>
+            Volver
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container py-4">
+    <div className="container mt-4">
       <div className="row">
-        <div className="col-md-4 mb-4">
-          {game.background_image ? (
+        <div className="col-12">
+          <button
+            className="btn btn-outline-secondary mb-3"
+            onClick={() => navigate(-1)}
+          >
+            ← Volver
+          </button>
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-md-4">
+          {game.background_image && (
             <img
               src={game.background_image}
               alt={game.name}
-              className="img-fluid rounded shadow"
+              className="img-fluid rounded shadow-sm"
             />
-          ) : (
-            <div className="bg-light rounded shadow d-flex align-items-center justify-content-center"
-              style={{ height: "300px" }}>
-              <i className="fa-solid fa-gamepad fa-4x text-muted"></i>
-            </div>
           )}
         </div>
+
         <div className="col-md-8">
-          <Link to="/rawg" className="btn btn-outline-secondary btn-sm">
-            <i className="fa-solid fa-arrow-left me-2"></i>
-            Volver a la lista
-          </Link>
+          <div className="game-header mb-4">
+            <h1 className="display-4 mb-2">{game.name}</h1>
 
-          <h1 className="mb-3">{game.name}</h1>
+            <div className="game-meta mb-3">
+              {game.rating > 0 && (
+                <span className="badge bg-warning text-dark me-2">
+                  <i className="fas fa-star me-1"></i>
+                  {game.rating}/5
+                </span>
+              )}
+              {game.metacritic && (
+                <span className="badge bg-success me-2">
+                  Metacritic: {game.metacritic}
+                </span>
+              )}
+              {game.released && (
+                <span className="badge bg-info me-2">
+                  <i className="fas fa-calendar me-1"></i>
+                  {game.released}
+                </span>
+              )}
+            </div>
 
-          <div className="mb-3">
-            {game.released && (
-              <span className="badge bg-primary me-2">
-                <i className="fa-regular fa-calendar me-1"></i>
-                {game.released}
-              </span>
+            {game.genres && game.genres.length > 0 && (
+              <div className="genres mb-3">
+                <h6>Géneros:</h6>
+                <div>
+                  {game.genres.map((genre) => (
+                    <span key={genre} className="badge bg-secondary me-1">
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
-            {game.rating && (
-              <span className="badge bg-warning text-dark">
-                <i className="fa-solid fa-star me-1"></i>
-                {game.rating}/5
-              </span>
+
+            {game.platforms && game.platforms.length > 0 && (
+              <div className="platforms mb-3">
+                <h6>Plataformas:</h6>
+                <div>
+                  {game.platforms.map((platform) => (
+                    <span key={platform} className="badge bg-primary me-1">
+                      {platform}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
@@ -190,18 +297,23 @@ export const RawgGameDetail = () => {
             </div>
           )}
 
-          {/* Solo mostrar botón de favoritos si el usuario está autenticado y es un usuario regular */}
           {isAuthenticated && user && user.role === "user" && (
-            <button
-              className="btn btn-sm btn-outline-danger mb-3 mt-3"
-              onClick={handleAddFavorite}
-            >
-              <i className="fa-solid fa-heart me-2"></i>
-              Añadir a favoritos
-            </button>
+            <div className="mt-3">
+              <button
+                className="btn btn-warning me-2"
+                onClick={handleAddFavorite}
+                disabled={adding}
+              >
+                {adding ? "Añadiendo..." : (
+                  <>
+                    <i className="fas fa-star me-1"></i>
+                    Añadir a favoritos
+                  </>
+                )}
+              </button>
+            </div>
           )}
 
-          {/* Mensaje para usuarios no autenticados */}
           {!isAuthenticated && (
             <div className="alert alert-info mb-3">
               <i className="fa-solid fa-info-circle me-2"></i>
@@ -209,7 +321,6 @@ export const RawgGameDetail = () => {
             </div>
           )}
 
-          {/* Mensaje para admins */}
           {isAuthenticated && user && user.role === "admin" && (
             <div className="alert alert-warning mb-3">
               <i className="fa-solid fa-user-shield me-2"></i>
@@ -217,14 +328,43 @@ export const RawgGameDetail = () => {
             </div>
           )}
 
+
           {game.description && (
-            <div className="mt-4">
-              <h5>Descripción:</h5>
-              <div className="border p-3 rounded bg-light">
-                <p className="mb-0">{game.description}</p>
-              </div>
+            <div className="game-description">
+              <h5>Descripción</h5>
+              <div
+                className="description-content"
+                dangerouslySetInnerHTML={{ __html: game.description }}
+              />
             </div>
           )}
+
+          {/* Información adicional */}
+          <div className="additional-info mt-4">
+            {game.developers && game.developers.length > 0 && (
+              <p>
+                <strong>Desarrolladores:</strong> {game.developers.join(", ")}
+              </p>
+            )}
+            {game.publishers && game.publishers.length > 0 && (
+              <p>
+                <strong>Distribuidores:</strong> {game.publishers.join(", ")}
+              </p>
+            )}
+            {game.website && (
+              <p>
+                <strong>Sitio web:</strong>
+                <a
+                  href={game.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ms-2"
+                >
+                  Visitar sitio oficial
+                </a>
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -428,7 +428,7 @@ export const GameManager = () => {
               onClick={() => handleDelete(game.id)}
               style={{ width: "40px", height: "40px" }}
             >
-              <i className="fa-solid fa-trash"></i>
+              <i className="fas fa-trash"></i>
             </button>
           </li>
         ))}

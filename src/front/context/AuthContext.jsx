@@ -5,70 +5,119 @@ const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 const AuthContext = createContext();
 
+const LS_TOKEN_KEY = "token";
+const LS_USER_KEY = "user";
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // { email, role, ... }
+  const [user, setUser] = useState(null); // { id, name, nickname, email, role, profile_image_url }
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true); // Por defecto true, se cambia según backend
   const navigate = useNavigate();
 
-  // Verificar si hay sesión activa al cargar
-  useEffect(() => {
-    const verifyToken = async () => {
-      const token = sessionStorage.getItem("token");
-      if (token) {
-        try {
-          // Verificar token con el backend
-          const res = await fetch(`${API_URL}/api/verify-token`, {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json"
-            }
-          });
+  // ---- helpers de storage ----
+  const saveToken = (t) => localStorage.setItem(LS_TOKEN_KEY, t);
+  const getToken = () => localStorage.getItem(LS_TOKEN_KEY);
+  const clearToken = () => localStorage.removeItem(LS_TOKEN_KEY);
 
-          if (res.ok) {
-            const userData = await res.json();
-            setUser(userData);
-            setIsAuthenticated(true);
-          } else {
-            // Token inválido, limpiar sesión
-            sessionStorage.removeItem("token");
-            setUser(null);
-            setIsAuthenticated(false);
-          }
-        } catch (error) {
-          console.error("Error verificando token:", error);
-          sessionStorage.removeItem("token");
-          setUser(null);
-          setIsAuthenticated(false);
-        }
+  const saveUserLS = (u) => localStorage.setItem(LS_USER_KEY, JSON.stringify(u));
+  const getUserLS = () => {
+    try {
+      const raw = localStorage.getItem(LS_USER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+  const clearUserLS = () => localStorage.removeItem(LS_USER_KEY);
+
+  // ---- util: traer usuario fresco del backend ----
+  const refreshUserFromServer = async (tokenParam) => {
+    const token = tokenParam || getToken();
+    if (!token) return null;
+
+    const res = await fetch(`${API_URL}/api/verify-token`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      // token inválido o expirado
+      clearToken();
+      clearUserLS();
+      setUser(null);
+      setIsAuthenticated(false);
+      return null;
+    }
+
+    const freshUser = await res.json();
+    setUser(freshUser);
+    setIsAuthenticated(true);
+    saveUserLS(freshUser);
+    return freshUser;
+  };
+
+  // ---- boot: hidratar cache y validar token ----
+  useEffect(() => {
+    const boot = async () => {
+      const cachedUser = getUserLS();
+      const token = getToken();
+
+      // Hidrata rápido la UI si hay user en cache
+      if (cachedUser) {
+        setUser(cachedUser);
+        setIsAuthenticated(true);
+      }
+
+      if (token) {
+        await refreshUserFromServer(token);
+      } else {
+        clearUserLS();
+        setUser(null);
+        setIsAuthenticated(false);
       }
     };
 
-    verifyToken();
+    boot();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---- Onboarding ----
   const checkOnboardingStatus = async (userId) => {
     try {
-      const token = sessionStorage.getItem("token");
+      const token = getToken();
+      if (!token) {
+        setOnboardingCompleted(false);
+        return false;
+      }
+
       const response = await fetch(`${API_URL}/api/onboarding/status/${userId}`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        return data.is_completed;
+        const completed = !!data.is_completed;
+        setOnboardingCompleted(completed);
+        return completed;
       }
+
+      setOnboardingCompleted(false);
       return false;
     } catch (error) {
-      console.error('Error checking onboarding status:', error);
+      console.error("Error checking onboarding status:", error);
+      setOnboardingCompleted(false);
       return false;
     }
   };
 
+  // ---- login user ----
   const loginUser = async (nickname, password) => {
     try {
       const res = await fetch(`${API_URL}/api/user-login`, {
@@ -78,43 +127,36 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (!res.ok) throw new Error("Nickname o contraseña incorrectos");
-      const data = await res.json();
-      sessionStorage.setItem("token", data.access_token);
 
-      // Obtener datos reales del usuario usando el token
-      const verifyRes = await fetch(`${API_URL}/api/verify-token`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${data.access_token}`,
-          "Content-Type": "application/json"
-        }
-      });
+      const data = await res.json(); // { access_token, user_type }
+      const token = data.access_token;
+      saveToken(token);
 
-      if (verifyRes.ok) {
-        const userData = await verifyRes.json();
-        setUser(userData);
-        setIsAuthenticated(true);
-        
-        // Solo verificar onboarding para usuarios regulares, no admins
-        if (userData.role === "user") {
-          const onboardingCompleted = await checkOnboardingStatus(userData.id);
-          if (!onboardingCompleted) {
-            navigate("/onboarding");
-            return;
-          }
+      const freshUser = await refreshUserFromServer(token);
+      if (!freshUser) throw new Error("Error obteniendo datos del usuario");
+
+      // Solo verificar onboarding para usuarios regulares
+      if ((freshUser.role || "user") === "user") {
+        const completed = await checkOnboardingStatus(freshUser.id);
+        if (!completed) {
+          navigate("/onboarding");
+          return freshUser;
         }
-        
-        navigate("/");
-      } else {
-        throw new Error("Error obteniendo datos del usuario");
       }
+
+      navigate("/");
+      return freshUser;
     } catch (err) {
       console.error("Login error:", err);
-      sessionStorage.removeItem("token");
+      clearToken();
+      clearUserLS();
+      setUser(null);
+      setIsAuthenticated(false);
       throw err;
     }
   };
 
+  // ---- login admin ----
   const loginAdmin = async (username, password) => {
     try {
       const res = await fetch(`${API_URL}/api/admin-login`, {
@@ -124,48 +166,69 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (!res.ok) throw new Error("Nombre o contraseña incorrectos");
-      const data = await res.json();
-      sessionStorage.setItem("token", data.access_token);
 
-      // Obtener datos reales del admin usando el token
-      const verifyRes = await fetch(`${API_URL}/api/verify-token`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${data.access_token}`,
-          "Content-Type": "application/json"
-        }
-      });
+      const data = await res.json(); // { access_token, user_type }
+      const token = data.access_token;
+      saveToken(token);
 
-      if (verifyRes.ok) {
-        const userData = await verifyRes.json();
-        setUser(userData);
-        setIsAuthenticated(true);
-        navigate("/");
-      } else {
-        throw new Error("Error obteniendo datos del administrador");
-      }
+      const freshUser = await refreshUserFromServer(token);
+      if (!freshUser) throw new Error("Error obteniendo datos del administrador");
+
+      navigate("/");
+      return freshUser;
     } catch (err) {
-      console.error("Login error:", err);
-      sessionStorage.removeItem("token");
+      console.error("Admin login error:", err);
+      clearToken();
+      clearUserLS();
+      setUser(null);
+      setIsAuthenticated(false);
       throw err;
     }
   };
 
+  // ---- logout ----
   const logout = () => {
-    sessionStorage.removeItem("token");
+    clearToken();
+    clearUserLS();
     setUser(null);
     setIsAuthenticated(false);
+    setOnboardingCompleted(true); // Reset onboarding state
     navigate("/");
   };
 
+  // ---- actualizar parcialmente el usuario (p. ej., profile_image_url) ----
+  const updateUser = (partial) => {
+    setUser((prev) => {
+      const next = { ...(prev || {}), ...partial };
+      saveUserLS(next);
+      return next;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loginUser, loginAdmin, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        onboardingCompleted,
+        loginUser,
+        loginAdmin,
+        logout,
+        checkOnboardingStatus,
+        updateUser,
+        getToken,
+        refreshUserFromServer,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
-
-
 export { AuthContext };
+
+
+
+
+

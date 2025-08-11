@@ -123,7 +123,7 @@ export const Users = () => {
                 style={{ width: "40px", height: "40px" }}
                 onClick={() => handleDelete(user.id)}
               >
-                <i className="fa-solid fa-trash"></i>
+                <i className="fas fa-trash"></i>
               </button>
             </div>
           </li>

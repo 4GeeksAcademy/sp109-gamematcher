@@ -6,18 +6,24 @@ db = SQLAlchemy()
 
 # Users
 class User(db.Model):
-    id: Mapped[int] = mapped_column(primary_key=True)
-    nickname: Mapped[str] = mapped_column(String(120), nullable=False)
-    email: Mapped[str] = mapped_column(
-        String(120), unique=True, nullable=False)
-    password: Mapped[str] = mapped_column(String(200), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    nickname = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(50), default="user")
+    is_active = db.Column(db.Boolean(), default=True)
+    profile_image_url = db.Column(db.String(500), nullable=True)
 
     def serialize(self):
         return {
             "id": self.id,
             "nickname": self.nickname,
-            "email": self.email
+            "email": self.email,
+            "role": self.role,
+            "profile_image_url": self.profile_image_url
         }
+
+
 
 # Games
 class Game(db.Model):
