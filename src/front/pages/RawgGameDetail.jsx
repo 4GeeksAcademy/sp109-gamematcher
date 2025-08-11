@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export const RawgGameDetail = () => {
@@ -12,53 +12,44 @@ export const RawgGameDetail = () => {
   const [error, setError] = useState(null);
   const [adding, setAdding] = useState(false);
 
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
   useEffect(() => {
     fetchGameDetail();
   }, [id]);
+
+  const [platformNames, setPlatformNames] = useState([]);
+  const [genreNames, setGenreNames] = useState([]);
 
   const fetchGameDetail = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Buscar en RAWG API
-      const API_KEY = import.meta.env.VITE_RAWG_API_KEY;
-
-      if (!API_KEY) {
-        throw new Error("RAWG API key no configurada");
+      const res = await fetch(`${backendUrl}/api/games/${id}`);
+      if (!res.ok) {
+        throw new Error("Juego no encontrado en la base de datos");
       }
 
-      const response = await fetch(
-        `https://api.rawg.io/api/games/${id}?key=${API_KEY}`
-      );
+      const data = await res.json();
+      setGame(data);
 
-      if (!response.ok) {
-        throw new Error(
-          `Error ${response.status}: No se pudo obtener el juego`
-        );
+      try {
+        const [platRes, genRes] = await Promise.all([
+          fetch(`${backendUrl}/api/game-platforms/game/${id}`),
+          fetch(`${backendUrl}/api/game-genres/game/${id}`)
+        ]);
+
+        const platData = platRes.ok ? await platRes.json() : [];
+        const genData = genRes.ok ? await genRes.json() : [];
+
+        setPlatformNames(platData.map(p => p.platform_name).filter(Boolean));
+        setGenreNames(genData.map(g => g.genre_name).filter(Boolean));
+      } catch (e) {
+        console.warn("No se pudieron cargar plataformas/géneros relacionados:", e);
+        setPlatformNames([]);
+        setGenreNames([]);
       }
-
-      const rawgGame = await response.json();
-
-      setGame({
-        id: rawgGame.id,
-        rawg_id: rawgGame.id,
-        name: rawgGame.name,
-        description:
-          rawgGame.description_raw ||
-          rawgGame.description ||
-          "Sin descripción disponible",
-        background_image: rawgGame.background_image,
-        rating: rawgGame.rating || 0,
-        released: rawgGame.released,
-        platforms: rawgGame.platforms?.map((p) => p.platform.name) || [],
-        genres: rawgGame.genres?.map((g) => g.name) || [],
-        metacritic: rawgGame.metacritic,
-        website: rawgGame.website,
-        developers: rawgGame.developers?.map((d) => d.name) || [],
-        publishers: rawgGame.publishers?.map((p) => p.name) || [],
-        source: 'rawg'
-      });
 
     } catch (err) {
       console.error("Error al cargar juego:", err);
@@ -67,6 +58,39 @@ export const RawgGameDetail = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchGameDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="container py-4">
+        <div className="text-center">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+          <p className="mt-2 text-muted">Cargando detalles del juego...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !game) {
+    return (
+      <div className="container py-4">
+        <div className="text-center">
+          <h3 className="text-danger">Error al cargar el juego</h3>
+          <p className="text-muted">{error || 'Juego no encontrado'}</p>
+          <Link to="/rawg" className="btn btn-primary">
+            <i className="fa-solid fa-arrow-left me-2"></i>
+            Volver a la lista
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddFavorite = async () => {
     if (!user) {
@@ -251,18 +275,59 @@ export const RawgGameDetail = () => {
             )}
           </div>
 
-          {/* Botones de acción - Solo para usuarios normales, no admins */}
-          {user && user.role !== "admin" && (
-            <div className="action-buttons mb-4">
+          {platformNames.length > 0 && (
+            <div className="mt-3">
+              <h5>Plataformas:</h5>
+              <div>
+                {platformNames.map((p, idx) => (
+                  <span key={idx} className="badge bg-secondary me-2">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {genreNames.length > 0 && (
+            <div className="mt-3">
+              <h5>Géneros:</h5>
+              <div>
+                {genreNames.map((g, idx) => (
+                  <span key={idx} className="badge bg-info me-2 text-dark">{g}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isAuthenticated && user && user.role === "user" && (
+            <div className="mt-3">
               <button
                 className="btn btn-warning me-2"
                 onClick={handleAddFavorite}
                 disabled={adding}
               >
-                {adding ? "Añadiendo..." : <><i className="fas fa-star me-1"></i>Añadir a favoritos</>}
+                {adding ? "Añadiendo..." : (
+                  <>
+                    <i className="fas fa-star me-1"></i>
+                    Añadir a favoritos
+                  </>
+                )}
               </button>
             </div>
           )}
+
+          {!isAuthenticated && (
+            <div className="alert alert-info mb-3">
+              <i className="fa-solid fa-info-circle me-2"></i>
+              <Link to="/login" className="alert-link">Inicia sesión</Link> para añadir juegos a favoritos
+            </div>
+          )}
+
+          {isAuthenticated && user && user.role === "admin" && (
+            <div className="alert alert-warning mb-3">
+              <i className="fa-solid fa-user-shield me-2"></i>
+              Los administradores no pueden añadir favoritos
+            </div>
+          )}
+
 
           {game.description && (
             <div className="game-description">
