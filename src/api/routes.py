@@ -11,7 +11,7 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 api = Blueprint('api', __name__)
 
@@ -32,8 +32,6 @@ def handle_hello():
     return jsonify(response_body), 200
 
 # GET all games
-
-
 @api.route('/games', methods=['GET'])
 def get_all_games():
     games = Game.query.all()
@@ -53,52 +51,87 @@ def get_one_game(game_id):
 @api.route('/games', methods=['POST'])
 def create_game():
     data = request.get_json()
+    print("📥 Datos recibidos en /games:", data)  # DEBUG
 
-    if not data.get("name"):
-        raise APIException("Game name is required", status_code=400)
+    if not data or not data.get("name"):
+        return jsonify({"error": "Game name is required"}), 400
 
-    # Si se proporciona un ID específico verificar si ya existe
-    if data.get("id"):
-        existing_game = Game.query.get(data["id"])
-        if existing_game:
-            # Si el juego ya existe, devolvemos el existente
-            return jsonify(existing_game.serialize()), 200
-
-        # Crear juego con ID específico
-        new_game = Game(
-            id=data["id"],
-            name=data["name"],
-            description=data.get("description"),
-            background_image=data.get("background_image"),
-            released=data.get("released"),
-            rating=data.get("rating"),
-            rawg_id=data.get("rawg_id")
-        )
+    # Duplicados
+    existing_game = None
+    if data.get("rawg_id") is not None:
+        existing_game = Game.query.filter_by(rawg_id=data["rawg_id"]).first()
     else:
-        # Crear juego con ID auto-generado
-        new_game = Game(
-            name=data["name"],
-            description=data.get("description"),
-            background_image=data.get("background_image"),
-            released=data.get("released"),
-            rating=data.get("rating"),
-            rawg_id=data.get("rawg_id")
-        )
+        existing_game = Game.query.filter(
+            db.func.lower(Game.name) == data["name"].lower()
+        ).first()
 
+    if existing_game:
+        print("⚠️ Joc ja existent:", existing_game.name)
+        return jsonify(existing_game.serialize()), 200
+
+    # Creacion
+    new_game = Game(
+        name=data["name"],
+        description=data.get("description"),
+        background_image=data.get("background_image"),
+        released=data.get("released"),
+        rating=data.get("rating"),
+        rawg_id=data.get("rawg_id")
+    )
     db.session.add(new_game)
+    db.session.flush()  # flush para obtener un id y no de error
 
+    # Plataformas por ID y nombres
+    platform_ids = data.get("platform_ids", [])
+    platforms_names = data.get("platforms", [])
+
+    if platform_ids:
+        for pid in platform_ids:
+            platform = Platform.query.get(pid)
+            if platform:
+                gp = GamePlatform(game_id=new_game.id, platform_id=pid)
+                db.session.add(gp)
+            else:
+                print(f"⚠️ Plataforma amb id {pid} no trobada")
+    elif platforms_names:
+        for pname in platforms_names:
+            platform = Platform.query.filter(db.func.lower(Platform.name) == pname.lower()).first()
+            if platform:
+                gp = GamePlatform(game_id=new_game.id, platform_id=platform.id)
+                db.session.add(gp)
+            else:
+                print(f"⚠️ Plataforma amb nom '{pname}' no trobada")
+
+    # generos por ID y nombres
+    genre_ids = data.get("genre_ids", [])
+    genres_names = data.get("genres", [])
+
+    if genre_ids:
+        for gid in genre_ids:
+            genre = Genre.query.get(gid)
+            if genre:
+                gg = GameGenre(game_id=new_game.id, genre_id=gid)
+                db.session.add(gg)
+            else:
+                print(f"⚠️ Gènere amb id {gid} no trobat")
+    elif genres_names:
+        for gname in genres_names:
+            genre = Genre.query.filter(db.func.lower(Genre.name) == gname.lower()).first()
+            if genre:
+                gg = GameGenre(game_id=new_game.id, genre_id=genre.id)
+                db.session.add(gg)
+            else:
+                print(f"⚠️ Gènere amb nom '{gname}' no trobat")
+
+    # Commit final
     try:
         db.session.commit()
+        print(f"✅ Joc creat definitivament: {new_game.name} (ID: {new_game.id})")
         return jsonify(new_game.serialize()), 201
     except Exception as e:
         db.session.rollback()
-        # Si hay un error de duplicado, intentar buscar el juego existente
-        if data.get("id"):
-            existing_game = Game.query.get(data["id"])
-            if existing_game:
-                return jsonify(existing_game.serialize()), 200
-        raise APIException("Error creating game", status_code=500)
-
+        print("❌ Error creant joc:", e)
+        return jsonify({"error": "Error al crear el joc"}), 500
 
 # PUT update a game
 @api.route('/games/<int:game_id>', methods=['PUT'])
@@ -170,21 +203,22 @@ def get_one_genre(genre_id):
 # POST a new genre
 @api.route('/genres', methods=['POST'])
 def create_genre():
-    data = request.get_json()
-
-    if not data.get("name"):
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
         raise APIException("Genre name is required", status_code=400)
 
+    existing = Genre.query.filter(func.lower(Genre.name) == name.lower()).first()
+    if existing:
+        return jsonify(existing.serialize()), 200
+
     new_genre = Genre(
-        name=data["name"],
+        name=name,
         image=data.get("image")
     )
-
     db.session.add(new_genre)
     db.session.commit()
-
     return jsonify(new_genre.serialize()), 201
-
 
 # PUT update a genre
 @api.route('/genres/<int:genre_id>', methods=['PUT'])
@@ -229,8 +263,6 @@ def delete_genre(genre_id):
         raise APIException(f"Error deleting genre: {str(e)}", status_code=500)
 
 # GET all platforms
-
-
 @api.route('/platforms', methods=['GET'])
 def get_all_platforms():
     platforms = Platform.query.all()
@@ -238,8 +270,6 @@ def get_all_platforms():
 
 
 # GET one platform by ID
-
-
 @api.route('/platforms/<int:platform_id>', methods=['GET'])
 def get_one_platform(platform_id):
     platform = Platform.query.get(platform_id)
@@ -249,29 +279,26 @@ def get_one_platform(platform_id):
 
 
 # POST a new platform
-
-
 @api.route('/platforms', methods=['POST'])
 def create_platform():
-    data = request.get_json()
-
-    if not data.get("name"):
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
         raise APIException("Platform name is required", status_code=400)
 
+    existing = Platform.query.filter(func.lower(Platform.name) == name.lower()).first()
+    if existing:
+        return jsonify(existing.serialize()), 200
+
     new_platform = Platform(
-        name=data["name"],
+        name=name,
         price=data.get("price")
     )
-
     db.session.add(new_platform)
     db.session.commit()
-
     return jsonify(new_platform.serialize()), 201
 
-
 # PUT update a platform
-
-
 @api.route('/platforms/<int:platform_id>', methods=['PUT'])
 def update_platform(platform_id):
     platform = Platform.query.get(platform_id)
@@ -287,8 +314,6 @@ def update_platform(platform_id):
 
 
 # DELETE a platform
-
-
 @api.route('/platforms/<int:platform_id>', methods=['DELETE'])
 def delete_platform(platform_id):
     platform = Platform.query.get(platform_id)
@@ -317,16 +342,12 @@ def delete_platform(platform_id):
 
 
 # GET all users
-
-
 @api.route('/users', methods=['GET'])
 def get_all_users():
     users = User.query.all()
     return jsonify([user.serialize() for user in users]), 200
 
 # GET one user by ID
-
-
 @api.route('/users/<int:user_id>', methods=['GET'])
 def get_one_user(user_id):
     user = User.query.get(user_id)
@@ -335,8 +356,6 @@ def get_one_user(user_id):
     return jsonify(user.serialize()), 200
 
 # POST a new user
-
-
 @api.route('/users', methods=['POST'])
 def create_user():
     data = request.get_json()
@@ -357,8 +376,6 @@ def create_user():
     return jsonify(new_user.serialize()), 201
 
 # PUT update a user
-
-
 @api.route('/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
     user = User.query.get(user_id)
@@ -374,8 +391,6 @@ def update_user(user_id):
     return jsonify(user.serialize()), 200
 
 # DELETE a user
-
-
 @api.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     user = User.query.get(user_id)
@@ -421,31 +436,20 @@ def get_all_game_platforms():
 
 @api.route('/game-platforms', methods=['POST'])
 def create_game_platform():
-    data = request.get_json()
-
+    data = request.get_json() or {}
     game_id = data.get("game_id")
     platform_id = data.get("platform_id")
-
     if not game_id or not platform_id:
         return jsonify({"error": "game_id and platform_id are required"}), 400
 
-    game = Game.query.get(game_id)
-    platform = Platform.query.get(platform_id)
+    existing = GamePlatform.query.filter_by(game_id=game_id, platform_id=platform_id).first()
+    if existing:
+        return jsonify(existing.serialize()), 200
 
-    if not game or not platform:
-        return jsonify({"error": "Invalid game_id or platform_id"}), 404
-
-    existing_relation = GamePlatform.query.filter_by(
-        game_id=game_id, platform_id=platform_id).first()
-    if existing_relation:
-        return jsonify({"error": "Game-Platform association already exists"}), 409
-
-    new_relation = GamePlatform(game_id=game_id, platform_id=platform_id)
-    db.session.add(new_relation)
+    rel = GamePlatform(game_id=game_id, platform_id=platform_id)
+    db.session.add(rel)
     db.session.commit()
-
-    return jsonify(new_relation.serialize()), 201
-
+    return jsonify(rel.serialize()), 201
 
 @api.route('/game-platforms/<int:id>', methods=['DELETE'])
 def delete_game_platform(id):
@@ -473,16 +477,12 @@ def get_games_for_platform(platform_id):
 
 
 # Admin users CRUD operations
-
-
 @api.route('/admins', methods=['GET'])
 def get_all_admin_users():
     admins = AdminUser.query.all()
     return jsonify([a.serialize() for a in admins]), 200
 
 # GET one admin
-
-
 @api.route('/admins/<int:admin_id>', methods=['GET'])
 def get_admin_user(admin_id):
     admin = AdminUser.query.get(admin_id)
@@ -491,8 +491,6 @@ def get_admin_user(admin_id):
     return jsonify(admin.serialize()), 200
 
 # POST new admin
-
-
 @api.route('/admins', methods=['POST'])
 def create_admin_user():
     data = request.get_json()
@@ -509,8 +507,6 @@ def create_admin_user():
     return jsonify(new_admin.serialize()), 201
 
 # PUT update admin
-
-
 @api.route('/admins/<int:admin_id>', methods=['PUT'])
 def update_admin_user(admin_id):
     admin = AdminUser.query.get(admin_id)
@@ -526,8 +522,6 @@ def update_admin_user(admin_id):
     return jsonify(admin.serialize()), 200
 
 # DELETE admin
-
-
 @api.route('/admins/<int:admin_id>', methods=['DELETE'])
 def delete_admin_user(admin_id):
     admin = AdminUser.query.get(admin_id)
@@ -540,8 +534,6 @@ def delete_admin_user(admin_id):
 
 
 # Game-Genre association operations
-
-
 @api.route('/game-genres', methods=['GET'])
 def get_all_game_genres():
     associations = GameGenre.query.all()
@@ -550,25 +542,20 @@ def get_all_game_genres():
 
 @api.route('/game-genres', methods=['POST'])
 def create_game_genre():
-    data = request.get_json()
-
-    game_id = int(data.get("game_id"))
-    genre_id = int(data.get("genre_id"))
-
+    data = request.get_json() or {}
+    game_id = data.get("game_id")
+    genre_id = data.get("genre_id")
     if not game_id or not genre_id:
         return jsonify({"error": "game_id and genre_id are required"}), 400
 
-    game = Game.query.get(game_id)
-    genre = Genre.query.get(genre_id)
+    existing = GameGenre.query.filter_by(game_id=game_id, genre_id=genre_id).first()
+    if existing:
+        return jsonify(existing.serialize()), 200
 
-    if not game or not genre:
-        return jsonify({"error": "Invalid game_id or genre_id"}), 404
-
-    new_relation = GameGenre(game_id=game_id, genre_id=genre_id)
-    db.session.add(new_relation)
+    rel = GameGenre(game_id=game_id, genre_id=genre_id)
+    db.session.add(rel)
     db.session.commit()
-
-    return jsonify(new_relation.serialize()), 201
+    return jsonify(rel.serialize()), 201
 
 
 @api.route('/game-genres/<int:id>', methods=['DELETE'])
@@ -846,7 +833,6 @@ def user_login():
     return jsonify(access_token=access_token, user_type="user"), 200
 
 
-# GET all user-genre preferences
 # GET all or filtered user-genre preferences
 @api.route('/user-genre-preferences', methods=['GET'])
 def get_all_user_genre_preferences():

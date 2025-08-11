@@ -11,6 +11,9 @@ export const RawgGameDetail = () => {
   const [error, setError] = useState(null);
   const { user, isAuthenticated } = useAuth();
 
+  const [platformNames, setPlatformNames] = useState([]);
+  const [genreNames, setGenreNames] = useState([]);
+
   const fetchGameDetail = async () => {
     try {
       setLoading(true);
@@ -23,6 +26,26 @@ export const RawgGameDetail = () => {
 
       const data = await res.json();
       setGame(data);
+
+      try {
+        const [platRes, genRes] = await Promise.all([
+          fetch(`${backendUrl}/api/game-platforms/game/${id}`),
+          fetch(`${backendUrl}/api/game-genres/game/${id}`)
+        ]);
+
+        const platData = platRes.ok ? await platRes.json() : [];
+        const genData = genRes.ok ? await genRes.json() : [];
+
+        setPlatformNames(platData.map(p => p.platform_name).filter(Boolean));
+        setGenreNames(genData.map(g => g.genre_name).filter(Boolean));
+      } catch (e) {
+        // Si falla alguna crida relacionada, no trenquem la pàgina
+        console.warn("No se pudieron cargar plataformas/géneros relacionados:", e);
+        setPlatformNames([]);
+        setGenreNames([]);
+      }
+      // 🔼 FI CANVIS
+
     } catch (err) {
       console.error("Error fetching game detail:", err);
       setError(err.message);
@@ -33,6 +56,7 @@ export const RawgGameDetail = () => {
 
   useEffect(() => {
     fetchGameDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loading) {
@@ -144,10 +168,32 @@ export const RawgGameDetail = () => {
             )}
           </div>
 
+          {platformNames.length > 0 && (
+            <div className="mt-3">
+              <h5>Plataformas:</h5>
+              <div>
+                {platformNames.map((p, idx) => (
+                  <span key={idx} className="badge bg-secondary me-2">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {genreNames.length > 0 && (
+            <div className="mt-3">
+              <h5>Géneros:</h5>
+              <div>
+                {genreNames.map((g, idx) => (
+                  <span key={idx} className="badge bg-info me-2 text-dark">{g}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Solo mostrar botón de favoritos si el usuario está autenticado y es un usuario regular */}
           {isAuthenticated && user && user.role === "user" && (
             <button
-              className="btn btn-sm btn-outline-danger mb-3"
+              className="btn btn-sm btn-outline-danger mb-3 mt-3"
               onClick={handleAddFavorite}
             >
               <i className="fa-solid fa-heart me-2"></i>
