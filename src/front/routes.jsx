@@ -25,6 +25,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
+import { Profile } from "./pages/Profile";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -67,6 +68,9 @@ export const router = createBrowserRouter(
       <Route path="/users/non-favorites" element={
         <ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />
       } />
+      <Route path="/profile" element={
+        <ProtectedRoute element={Profile} roles={["user", "admin"]} />
+      } />
 
       {/* Rutas públicas */}
       <Route path="/local-games" element={<LocalGamesList />} />
@@ -88,3 +92,4 @@ export const router = createBrowserRouter(
     </Route>
   )
 );
+
