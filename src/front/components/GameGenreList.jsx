@@ -157,7 +157,7 @@ const GameGenreList = () => {
                                         onClick={() => handleDelete(assoc.id)}
                                         title="Delete"
                                     >
-                                        🗑️
+                                        <i className="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>

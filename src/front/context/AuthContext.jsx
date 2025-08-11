@@ -11,6 +11,7 @@ const LS_USER_KEY = "user";
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null); // { id, name, nickname, email, role, profile_image_url }
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true); // Por defecto true, se cambia según backend
   const navigate = useNavigate();
 
   // ---- helpers de storage ----
@@ -29,7 +30,7 @@ export const AuthProvider = ({ children }) => {
   };
   const clearUserLS = () => localStorage.removeItem(LS_USER_KEY);
 
-  // ---- util común para traer usuario fresco del backend ----
+  // ---- util: traer usuario fresco del backend ----
   const refreshUserFromServer = async (tokenParam) => {
     const token = tokenParam || getToken();
     if (!token) return null;
@@ -64,7 +65,7 @@ export const AuthProvider = ({ children }) => {
       const cachedUser = getUserLS();
       const token = getToken();
 
-      // Hidrata rápido la UI (opcional, visual) si hay user en cache
+      // Hidrata rápido la UI si hay user en cache
       if (cachedUser) {
         setUser(cachedUser);
         setIsAuthenticated(true);
@@ -73,7 +74,6 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         await refreshUserFromServer(token);
       } else {
-        // sin token no hay sesión válida
         clearUserLS();
         setUser(null);
         setIsAuthenticated(false);
@@ -84,42 +84,106 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---- Onboarding ----
+  const checkOnboardingStatus = async (userId) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        setOnboardingCompleted(false);
+        return false;
+      }
+
+      const response = await fetch(`${API_URL}/api/onboarding/status/${userId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const completed = !!data.is_completed;
+        setOnboardingCompleted(completed);
+        return completed;
+      }
+
+      setOnboardingCompleted(false);
+      return false;
+    } catch (error) {
+      console.error("Error checking onboarding status:", error);
+      setOnboardingCompleted(false);
+      return false;
+    }
+  };
+
   // ---- login user ----
   const loginUser = async (nickname, password) => {
-    const res = await fetch(`${API_URL}/api/user-login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nickname, password }),
-    });
+    try {
+      const res = await fetch(`${API_URL}/api/user-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname, password }),
+      });
 
-    if (!res.ok) throw new Error("Nickname o contraseña incorrectos");
+      if (!res.ok) throw new Error("Nickname o contraseña incorrectos");
 
-    const data = await res.json(); // { access_token }
-    saveToken(data.access_token);
+      const data = await res.json(); // { access_token, user_type }
+      const token = data.access_token;
+      saveToken(token);
 
-    const freshUser = await refreshUserFromServer(data.access_token);
-    if (!freshUser) throw new Error("Error obteniendo datos del usuario");
+      const freshUser = await refreshUserFromServer(token);
+      if (!freshUser) throw new Error("Error obteniendo datos del usuario");
 
-    navigate("/");
+      // Solo verificar onboarding para usuarios regulares
+      if ((freshUser.role || "user") === "user") {
+        const completed = await checkOnboardingStatus(freshUser.id);
+        if (!completed) {
+          navigate("/onboarding");
+          return freshUser;
+        }
+      }
+
+      navigate("/");
+      return freshUser;
+    } catch (err) {
+      console.error("Login error:", err);
+      clearToken();
+      clearUserLS();
+      setUser(null);
+      setIsAuthenticated(false);
+      throw err;
+    }
   };
 
   // ---- login admin ----
   const loginAdmin = async (username, password) => {
-    const res = await fetch(`${API_URL}/api/admin-login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: username, password }),
-    });
+    try {
+      const res = await fetch(`${API_URL}/api/admin-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: username, password }),
+      });
 
-    if (!res.ok) throw new Error("Nombre o contraseña incorrectos");
+      if (!res.ok) throw new Error("Nombre o contraseña incorrectos");
 
-    const data = await res.json(); // { access_token }
-    saveToken(data.access_token);
+      const data = await res.json(); // { access_token, user_type }
+      const token = data.access_token;
+      saveToken(token);
 
-    const freshUser = await refreshUserFromServer(data.access_token);
-    if (!freshUser) throw new Error("Error obteniendo datos del administrador");
+      const freshUser = await refreshUserFromServer(token);
+      if (!freshUser) throw new Error("Error obteniendo datos del administrador");
 
-    navigate("/");
+      navigate("/");
+      return freshUser;
+    } catch (err) {
+      console.error("Admin login error:", err);
+      clearToken();
+      clearUserLS();
+      setUser(null);
+      setIsAuthenticated(false);
+      throw err;
+    }
   };
 
   // ---- logout ----
@@ -128,10 +192,11 @@ export const AuthProvider = ({ children }) => {
     clearUserLS();
     setUser(null);
     setIsAuthenticated(false);
+    setOnboardingCompleted(true); // Reset onboarding state
     navigate("/");
   };
 
-  // ---- actualizar parcialmente el usuario en memoria + LS (útil para profile_image_url) ----
+  // ---- actualizar parcialmente el usuario (p. ej., profile_image_url) ----
   const updateUser = (partial) => {
     setUser((prev) => {
       const next = { ...(prev || {}), ...partial };
@@ -145,9 +210,11 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         isAuthenticated,
+        onboardingCompleted,
         loginUser,
         loginAdmin,
         logout,
+        checkOnboardingStatus,
         updateUser,
         getToken,
         refreshUserFromServer,
@@ -160,6 +227,7 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => useContext(AuthContext);
 export { AuthContext };
+
 
 
 

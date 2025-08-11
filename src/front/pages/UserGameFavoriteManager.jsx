@@ -140,10 +140,10 @@ export const UserGameFavoriteManager = () => {
               <strong>{getUserName(item.user_id)}</strong> - {getGameName(item.game_id)}
             </div>
             <button
-              className="btn btn-sm btn-danger"
+              className="btn btn-sm btn-outline-danger"
               onClick={() => handleDelete(item.id)}
             >
-              <i className="fa-solid fa-trash"></i>
+              <i className="fas fa-trash"></i>
             </button>
           </li>
         ))}

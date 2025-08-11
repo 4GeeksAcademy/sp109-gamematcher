@@ -1,4 +1,3 @@
-// Import necessary components and functions from react-router-dom.
 import {
   createBrowserRouter,
   createRoutesFromElements,
@@ -17,12 +16,15 @@ import UserPlatformPreferenceList from "./components/UserPlatformPreferenceList"
 import UserGenrePreferenceList from "./components/UserGenrePreferenceList";
 import { UserGameFavoriteManager } from "./pages/UserGameFavoriteManager";
 import NonFavoriteGameList from './components/NonFavoriteGameList';
-import { RawgGameList } from "./pages/RawgGameList";
 import { RawgGameDetail } from "./pages/RawgGameDetail";
+import { GameRecommendations } from "./pages/GameRecommendations";
+import { LocalGamesList } from "./pages/LocalGamesList";
+import { LocalGameDetail } from "./pages/LocalGameDetail";
 import AdminLoginForm from "./components/AdminLoginForm";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
 import { Profile } from "./pages/Profile";
 
 export const router = createBrowserRouter(
@@ -71,11 +73,22 @@ export const router = createBrowserRouter(
       } />
 
       {/* Rutas públicas */}
-      <Route path="/rawg" element={<RawgGameList />} />
+      <Route path="/local-games" element={<LocalGamesList />} />
+      <Route path="/local-games/:id" element={<LocalGameDetail />} />
       <Route path="/rawg-games/:id" element={<RawgGameDetail />} />
+      <Route path="/game/:id" element={<RawgGameDetail />} />
+      <Route path="/games/:id" element={<LocalGameDetail />} />
+      <Route path="/recommendations" element={
+        <ProtectedRoute element={GameRecommendations} roles={["user"]} />
+      } />
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLoginForm />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+
+      {/* Ruta de onboarding para usuarios */}
+      <Route path="/onboarding" element={
+        <ProtectedRoute element={Onboarding} roles={["user"]} />
+      } />
     </Route>
   )
 );

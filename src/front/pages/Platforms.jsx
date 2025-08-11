@@ -86,7 +86,7 @@ export const Platforms = () => {
             </div>
             <div className="d-flex flex-column gap-2 mb-2">
               <button className="btn btn-sm btn-warning me-2 mb-2" style={{ width: "40px", height: "40px" }} onClick={() => handleEdit(platform)}><i className="fa-solid fa-pen-to-square"></i></button>
-              <button className="btn btn-sm btn-danger" style={{ width: "40px", height: "40px" }} onClick={() => handleDelete(platform.id)}><i className="fa-solid fa-trash"></i></button>
+              <button className="btn btn-sm btn-danger" style={{ width: "40px", height: "40px" }} onClick={() => handleDelete(platform.id)}><i className="fas fa-trash"></i></button>
             </div>
           </li>
         ))}
