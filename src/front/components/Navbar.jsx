@@ -44,6 +44,9 @@ export const Navbar = () => {
               <Link to="/users/non-favorites">
                 <button className="btn btn-outline-primary m-1">No Favoritos</button>
               </Link>
+              <Link to="/profile">
+                <button className="btn btn-outline-dark m-1">Profile</button>
+              </Link>
             </>
           )}
 
@@ -95,6 +98,7 @@ export const Navbar = () => {
     </nav>
   );
 };
+
 
 
 

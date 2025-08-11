@@ -23,6 +23,7 @@ import AdminLoginForm from "./components/AdminLoginForm";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Login from "./pages/Login";
+import { Profile } from "./pages/Profile";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -65,6 +66,9 @@ export const router = createBrowserRouter(
       <Route path="/users/non-favorites" element={
         <ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />
       } />
+      <Route path="/profile" element={
+        <ProtectedRoute element={Profile} roles={["user", "admin"]} />
+      } />
 
       {/* Rutas públicas */}
       <Route path="/rawg" element={<RawgGameList />} />
@@ -75,3 +79,4 @@ export const router = createBrowserRouter(
     </Route>
   )
 );
+
