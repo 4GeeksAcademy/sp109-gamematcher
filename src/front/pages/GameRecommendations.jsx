@@ -18,9 +18,9 @@ export const GameRecommendations = () => {
       setLoading(true);
       setError(null);
 
-      const preferencesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/games/recommendations`, {
+      const preferencesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/games/recommendations/context`, {
         headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 

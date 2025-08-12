@@ -23,12 +23,14 @@ export const Navbar = () => {
 
         <div className="ms-auto d-flex align-items-center">
 
-          {/* Ruta pública visible siempre */}
-          <Link to="/local-games" className="me-1">
-            <button className="btn btn-outline-primary m-1">
-              <i className="fas fa-database"></i> Base de Datos
-            </button>
-          </Link>
+          {/* Botón Base de Datos: oculto durante onboarding de usuario */}
+          {!(inOnboarding && isUser) && (
+            <Link to="/local-games" className="me-1">
+              <button className="btn btn-outline-primary m-1">
+                <i className="fas fa-database"></i> Base de Datos
+              </button>
+            </Link>
+          )}
 
           {/* --- No autenticado --- */}
           {!isAuthenticated && (

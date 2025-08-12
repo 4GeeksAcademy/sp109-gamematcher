@@ -86,7 +86,8 @@ def create_game():
         for pid in platform_ids:
             platform = Platform.query.get(pid)
             if platform:
-                db.session.add(GamePlatform(game_id=new_game.id, platform_id=pid))
+                db.session.add(GamePlatform(
+                    game_id=new_game.id, platform_id=pid))
             else:
                 print(f"⚠️ Plataforma amb id {pid} no trobada")
     elif platforms_names:
@@ -95,7 +96,8 @@ def create_game():
                 db.func.lower(Platform.name) == pname.lower()
             ).first()
             if platform:
-                db.session.add(GamePlatform(game_id=new_game.id, platform_id=platform.id))
+                db.session.add(GamePlatform(
+                    game_id=new_game.id, platform_id=platform.id))
             else:
                 print(f"⚠️ Plataforma amb nom '{pname}' no trobada")
 
@@ -116,7 +118,8 @@ def create_game():
                 db.func.lower(Genre.name) == gname.lower()
             ).first()
             if genre:
-                db.session.add(GameGenre(game_id=new_game.id, genre_id=genre.id))
+                db.session.add(
+                    GameGenre(game_id=new_game.id, genre_id=genre.id))
             else:
                 print(f"⚠️ Gènere amb nom '{gname}' no trobat")
 
@@ -165,6 +168,7 @@ def delete_game(game_id):
 
 # ------------------------------ Genres ---------------------------- #
 
+
 @api.route('/genres', methods=['GET'])
 def get_all_genres():
     genres = Genre.query.all()
@@ -200,6 +204,8 @@ def create_genre():
     return jsonify(new_genre.serialize()), 201
 
 # PUT update a genre
+
+
 @api.route('/genres/<int:genre_id>', methods=['PUT'])
 def update_genre(genre_id):
     genre = Genre.query.get(genre_id)
@@ -985,6 +991,8 @@ def get_game_recommendations_context():
         return jsonify({"error": f"Error al obtener preferencias: {str(e)}"}), 500
 
 # Recomendaciones locales (DB)
+
+
 @api.route('/games/recommendations', methods=['GET'])
 @jwt_required()
 def get_game_recommendations():
@@ -1025,6 +1033,7 @@ def get_game_recommendations():
 
 # ----------------------- Profile Image --------------------------- #
 
+
 @api.route('/users/<int:user_id>/profile-image', methods=['PUT'])
 @jwt_required()
 def update_profile_image(user_id):
@@ -1047,3 +1056,85 @@ def update_profile_image(user_id):
     user.profile_image_url = profile_image_url
     db.session.commit()
     return jsonify({"msg": "Profile image updated successfully", "profile_image_url": user.profile_image_url}), 200
+
+# Onboarding Routes
+
+
+@api.route('/onboarding/status/<int:user_id>', methods=['GET'])
+def get_onboarding_status(user_id):
+    """Obtiene el estado del onboarding del usuario"""
+
+    # Buscar el progreso del onboarding del usuario
+    progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
+
+    if not progress:
+        # Si no existe, crear uno nuevo
+        progress = OnboardingProgress(user_id=user_id)
+        db.session.add(progress)
+        db.session.commit()
+
+    return jsonify(progress.serialize()), 200
+
+
+@api.route('/onboarding/update-step', methods=['PUT'])
+def update_onboarding_step():
+    """Actualiza el step actual del onboarding"""
+    data = request.get_json()
+
+    user_id = data.get("user_id")
+    new_step = data.get("current_step")
+
+    if not user_id or not new_step:
+        return jsonify({"error": "user_id and current_step are required"}), 400
+
+    # Buscar el progreso del usuario
+    progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
+
+    if not progress:
+        return jsonify({"error": "Onboarding progress not found"}), 404
+
+    # Actualizar el step
+    progress.current_step = new_step
+    db.session.commit()
+
+    return jsonify(progress.serialize()), 200
+
+
+@api.route('/onboarding/complete', methods=['POST'])
+def complete_onboarding():
+    """Marca el onboarding como completado"""
+    data = request.get_json()
+
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+
+    # Buscar el progreso del usuario
+    progress = OnboardingProgress.query.filter_by(user_id=user_id).first()
+
+    if not progress:
+        return jsonify({"error": "Onboarding progress not found"}), 404
+
+    # Marcar como completado
+    progress.is_completed = True
+    progress.current_step = 4  # Último step
+    db.session.commit()
+
+    return jsonify(progress.serialize()), 200
+
+
+@api.route('/onboarding/games-sample', methods=['GET'])
+def get_onboarding_games_sample():
+    """Obtiene una muestra de juegos aleatorios para el onboarding"""
+
+    # Obtener el límite de juegos desde query params, por defecto 12
+    limit = request.args.get('limit', 12, type=int)
+
+    # Obtener juegos aleatorios ordenados por rating
+    games = Game.query.order_by(Game.rating.desc()).limit(limit).all()
+
+    if not games:
+        return jsonify({"error": "No games available"}), 404
+
+    return jsonify([game.serialize() for game in games]), 200
