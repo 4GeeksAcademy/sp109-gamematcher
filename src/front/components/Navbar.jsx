@@ -27,7 +27,7 @@ export const Navbar = () => {
           {!(inOnboarding && isUser) && (
             <Link to="/local-games" className="me-1">
               <button className="btn btn-outline-primary m-1">
-                <i className="fas fa-database"></i> Base de Datos
+                <i className="fas fa-database"></i> Todos los juegos
               </button>
             </Link>
           )}
