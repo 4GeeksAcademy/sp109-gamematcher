@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 const OnboardingStep1 = ({ selectedPlatforms, setSelectedPlatforms, onNext }) => {
   const [platforms, setPlatforms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [brokenImages, setBrokenImages] = useState(new Set());
 
-  // Cargar plataformas disponibles del backend
   useEffect(() => {
     loadPlatforms();
   }, []);
@@ -24,7 +24,7 @@ const OnboardingStep1 = ({ selectedPlatforms, setSelectedPlatforms, onNext }) =>
   const handlePlatformToggle = (platformId) => {
     console.log('Toggle plataforma:', platformId);
     console.log('Plataformas actualmente seleccionadas:', selectedPlatforms);
-    
+
     if (selectedPlatforms.includes(platformId)) {
       const newSelection = selectedPlatforms.filter(id => id !== platformId);
       console.log('Eliminar plataforma, nueva seleccion:', newSelection);
@@ -45,7 +45,6 @@ const OnboardingStep1 = ({ selectedPlatforms, setSelectedPlatforms, onNext }) =>
     onNext();
   };
 
-  // Iconos para cada plataforma - usando nomenclatura RAWG estándar
   const getPlatformIcon = (platformName) => {
     switch (platformName) {
       case 'PC':
@@ -93,7 +92,6 @@ const OnboardingStep1 = ({ selectedPlatforms, setSelectedPlatforms, onNext }) =>
               </p>
             </div>
 
-            {/* Grid de plataformas */}
             <div className="row g-3 mb-4">
               {platforms.map((platform) => {
                 const isSelected = selectedPlatforms.includes(platform.id);
@@ -102,14 +100,30 @@ const OnboardingStep1 = ({ selectedPlatforms, setSelectedPlatforms, onNext }) =>
                   <div key={platform.id} className="col-md-6 col-lg-4">
                     <div
                       className={`card h-100 border-2 cursor-pointer platform-card ${isSelected
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-light'
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-light'
                         }`}
                       onClick={() => handlePlatformToggle(platform.id)}
                       style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
                     >
                       <div className="card-body text-center p-4">
-                        <i className={`${getPlatformIcon(platform.name)} fa-2x mb-3`}></i>
+                        {platform.image && !brokenImages.has(platform.id) ? (
+                          <img
+                            src={platform.image}
+                            alt={platform.name}
+                            className="mb-3"
+                            style={{ maxHeight: '64px', objectFit: 'contain' }}
+                            onError={() => {
+                              setBrokenImages(prev => {
+                                const next = new Set(prev);
+                                next.add(platform.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        ) : (
+                          <i className={`${getPlatformIcon(platform.name)} fa-2x mb-3`}></i>
+                        )}
                         <h6 className="card-title mb-0">{platform.name}</h6>
                         {isSelected && (
                           <i className="fas fa-check-circle mt-2"></i>
@@ -121,14 +135,12 @@ const OnboardingStep1 = ({ selectedPlatforms, setSelectedPlatforms, onNext }) =>
               })}
             </div>
 
-            {/* Contador de selecciones */}
             <div className="text-center mb-4">
               <small className="text-muted">
                 {selectedPlatforms.length} plataforma{selectedPlatforms.length !== 1 ? 's' : ''} seleccionada{selectedPlatforms.length !== 1 ? 's' : ''}
               </small>
             </div>
 
-            {/* Botones de navegación */}
             <div className="d-flex justify-content-end">
               <button
                 className="btn btn-primary btn-lg px-4"
