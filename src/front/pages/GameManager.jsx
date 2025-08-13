@@ -21,6 +21,9 @@ export const GameManager = () => {
   const [allGenres, setAllGenres] = useState([]);
   const [alert, setAlert] = useState(null);
 
+  const [editing, setEditing] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const rawgApiKey = import.meta.env.VITE_RAWG_API_KEY;
 
@@ -41,6 +44,33 @@ export const GameManager = () => {
     } catch (err) {
       console.error("Error cargando plataformas/géneros:", err);
     }
+  };
+
+  const fetchGameLinks = async (gameId) => {
+    const [platRes, genRes] = await Promise.all([
+      fetch(`${backendUrl}/api/game-platforms/game/${gameId}`),
+      fetch(`${backendUrl}/api/game-genres/game/${gameId}`)
+    ]);
+    const plats = platRes.ok ? await platRes.json() : [];
+    const gens = genRes.ok ? await genRes.json() : [];
+    return {
+      platform_ids: plats.map(p => p.platform_id),
+      genre_ids: gens.map(g => g.genre_id)
+    };
+  };
+
+  const openEdit = async (game) => {
+    const links = await fetchGameLinks(game.id);
+    setEditing({
+      id: game.id,
+      name: game.name || "",
+      description: game.description || "",
+      released: game.released || "",
+      background_image: game.background_image || "",
+      rating: game.rating || "",
+      platform_ids: links.platform_ids || [],
+      genre_ids: links.genre_ids || []
+    });
   };
 
   useEffect(() => {
@@ -69,14 +99,13 @@ export const GameManager = () => {
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
-  // ------ HELPERS: assegurar que existeixen a BD i retornar IDs interns ------
+  // ------ HELPERS: para aseguran que existan y que devuelvan la ID que haya en la BD ------
 
   const ensurePlatformsExist = async (names) => {
     const norm = (s) => String(s || "").toLowerCase().trim();
     const mapNow = new Map(allPlatforms.map(p => [norm(p.name), p.id]));
     const missing = (names || []).filter(n => !mapNow.has(norm(n)));
 
-    // crea les que faltin (si no existeixen)
     for (const name of missing) {
       try {
         await fetch(`${backendUrl}/api/platforms`, {
@@ -85,11 +114,10 @@ export const GameManager = () => {
           body: JSON.stringify({ name })
         });
       } catch (e) {
-        console.warn("No s'ha pogut crear la plataforma:", name, e);
+        console.warn("No se ha podido crear la plataforma:", name, e);
       }
     }
 
-    // recarrega llistat i torna IDs finals
     const res = await fetch(`${backendUrl}/api/platforms`);
     const updated = await res.json();
     setAllPlatforms(updated);
@@ -102,7 +130,6 @@ export const GameManager = () => {
     const mapNow = new Map(allGenres.map(g => [norm(g.name), g.id]));
     const missing = (names || []).filter(n => !mapNow.has(norm(n)));
 
-    // crea els que faltin (si no existeixen)
     for (const name of missing) {
       try {
         await fetch(`${backendUrl}/api/genres`, {
@@ -111,11 +138,10 @@ export const GameManager = () => {
           body: JSON.stringify({ name })
         });
       } catch (e) {
-        console.warn("No s'ha pogut crear el gènere:", name, e);
+        console.warn("No se ha podido crear el género:", name, e);
       }
     }
 
-    // recarrega llistat i torna IDs finals
     const res = await fetch(`${backendUrl}/api/genres`);
     const updated = await res.json();
     setAllGenres(updated);
@@ -134,13 +160,11 @@ export const GameManager = () => {
       const detailRes = await fetch(`https://api.rawg.io/api/games/${game.id}?key=${rawgApiKey}`);
       const gameDetail = await detailRes.json();
 
-      // noms que dona RAWG
       const rawgPlatformNames = (gameDetail.platforms || []).map(p => p.platform?.name).filter(Boolean);
-      const rawgGenreNames    = (gameDetail.genres || []).map(g => g.name).filter(Boolean);
+      const rawgGenreNames = (gameDetail.genres || []).map(g => g.name).filter(Boolean);
 
-      // assegurem existència a BD i obtenim IDs interns
       const platform_ids = await ensurePlatformsExist(rawgPlatformNames);
-      const genre_ids    = await ensureGenresExist(rawgGenreNames);
+      const genre_ids = await ensureGenresExist(rawgGenreNames);
 
       const payload = {
         name: game.name,
@@ -240,6 +264,63 @@ export const GameManager = () => {
         return { ...prev, [name]: prevArr.filter((v) => v !== value) };
       }
     });
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "rating") {
+      const n = parseFloat(value);
+      if (n > 5) return;
+    }
+    setEditing(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditCheckboxChange = (e) => {
+    const { name, value, checked } = e.target; // name: 'platform_ids' o 'genre_ids'
+    const numVal = Number(value);
+    setEditing(prev => {
+      const arr = Array.isArray(prev[name]) ? prev[name] : [];
+      if (checked) {
+        if (arr.includes(numVal)) return prev;
+        return { ...prev, [name]: [...arr, numVal] };
+      } else {
+        return { ...prev, [name]: arr.filter(v => v !== numVal) };
+      }
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setSavingEdit(true);
+    try {
+      const body = {
+        name: editing.name,
+        description: editing.description,
+        released: editing.released,
+        background_image: editing.background_image,
+        rating: editing.rating === "" ? null : Number(editing.rating),
+        platform_ids: editing.platform_ids,
+        genre_ids: editing.genre_ids
+      };
+      const res = await fetch(`${backendUrl}/api/games/${editing.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error guardant canvis");
+      }
+      await res.json();
+      setEditing(null);
+      loadGames();
+      setAlert({ type: "success", message: "✅ Juego actualizado" });
+    } catch (e) {
+      console.error(e);
+      setAlert({ type: "danger", message: e.message || "❌ Error actualizando juego" });
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -423,16 +504,122 @@ export const GameManager = () => {
             <div>
               <strong>{game.name}</strong>
             </div>
-            <button
-              className="btn btn-sm btn-danger"
-              onClick={() => handleDelete(game.id)}
-              style={{ width: "40px", height: "40px" }}
-            >
-              <i className="fas fa-trash"></i>
-            </button>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => openEdit(game)}
+                style={{ width: "40px", height: "40px" }}
+                title="Editar"
+              >
+                <i className="fas fa-pen"></i>
+              </button>
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => handleDelete(game.id)}
+                style={{ width: "40px", height: "40px" }}
+                title="Eliminar"
+              >
+                <i className="fas fa-trash"></i>
+              </button>
+            </div>
           </li>
         ))}
       </ul>
+      {editing && (
+        <div className="modal-content" style={{ display: "block", background: "#fff"}}>
+          <div className="modal d-block" tabIndex="-1">
+            <div className="modal-dialog modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Editar juego</h5>
+                  <button type="button" className="btn-close" onClick={() => setEditing(null)} />
+                </div>
+                <div className="modal-body">
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label">Nombre</label>
+                      <input className="form-control" name="name" value={editing.name} onChange={handleEditChange} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label">Fecha lanzamiento</label>
+                      <input type="date" className="form-control" name="released" value={editing.released || ""} onChange={handleEditChange} />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label">Imagen de fondo (URL)</label>
+                      <input className="form-control" name="background_image" value={editing.background_image || ""} onChange={handleEditChange} />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label">Descripción</label>
+                      <textarea className="form-control" name="description" rows="4" value={editing.description || ""} onChange={handleEditChange} />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Puntuación (0-5)</label>
+                      <input type="number" step="0.1" min="0" max="5" className="form-control" name="rating" value={editing.rating ?? ""} onChange={handleEditChange} />
+                    </div>
+
+                    <div className="col-12">
+                      <label className="form-label d-block">Plataformas</label>
+                      <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+                        {allPlatforms.map(p => {
+                          const checked = editing.platform_ids.includes(p.id);
+                          return (
+                            <div key={p.id} className="col">
+                              <div className="form-check">
+                                <input
+                                  className="form-check-input"
+                                  type="checkbox"
+                                  id={`edit-platform-${p.id}`}
+                                  name="platform_ids"
+                                  value={p.id}
+                                  checked={checked}
+                                  onChange={handleEditCheckboxChange}
+                                />
+                                <label className="form-check-label" htmlFor={`edit-platform-${p.id}`}>{p.name}</label>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="col-12">
+                      <label className="form-label d-block">Géneros</label>
+                      <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+                        {allGenres.map(g => {
+                          const checked = editing.genre_ids.includes(g.id);
+                          return (
+                            <div key={g.id} className="col">
+                              <div className="form-check">
+                                <input
+                                  className="form-check-input"
+                                  type="checkbox"
+                                  id={`edit-genre-${g.id}`}
+                                  name="genre_ids"
+                                  value={g.id}
+                                  checked={checked}
+                                  onChange={handleEditCheckboxChange}
+                                />
+                                <label className="form-check-label" htmlFor={`edit-genre-${g.id}`}>{g.name}</label>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setEditing(null)} disabled={savingEdit}>Cancelar</button>
+                  <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>
+                    {savingEdit ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -133,19 +133,60 @@ def create_game():
         return jsonify({"error": "Error al crear el joc"}), 500
 
 # PUT update a game
-
-
 @api.route('/games/<int:game_id>', methods=['PUT'])
 def update_game(game_id):
+    data = request.get_json() or {}
+
     game = Game.query.get(game_id)
     if not game:
-        raise APIException("Game not found", status_code=404)
-    data = request.get_json()
-    game.name = data.get("name", game.name)
-    game.description = data.get("description", game.description)
-    db.session.commit()
-    return jsonify(game.serialize()), 200
+        return jsonify({"error": "Game not found"}), 404
 
+    # PUT para campos normales
+    basic_fields = ["name", "description", "background_image", "released", "rating", "rawg_id"]
+    for f in basic_fields:
+        if f in data:
+            setattr(game, f, data[f])
+
+    # Para editar Platforms
+    platform_ids = data.get("platform_ids", None)
+    if platform_ids is not None:
+        valid_platforms = Platform.query.filter(Platform.id.in_(platform_ids)).all()
+        valid_ids = {p.id for p in valid_platforms}
+
+        # Elimina relaciones al editarlo
+        db.session.query(GamePlatform).filter(
+            GamePlatform.game_id == game_id,
+            ~GamePlatform.platform_id.in_(valid_ids) if valid_ids else True
+        ).delete(synchronize_session=False)
+
+        # Agrega relaciones
+        existing_ids = {gp.platform_id for gp in GamePlatform.query.filter_by(game_id=game_id).all()}
+        to_add = valid_ids - existing_ids
+        for pid in to_add:
+            db.session.add(GamePlatform(game_id=game_id, platform_id=pid))
+
+    # Para editar Genres
+    genre_ids = data.get("genre_ids", None)
+    if genre_ids is not None:
+        valid_genres = Genre.query.filter(Genre.id.in_(genre_ids)).all()
+        valid_ids = {g.id for g in valid_genres}
+
+        db.session.query(GameGenre).filter(
+            GameGenre.game_id == game_id,
+            ~GameGenre.genre_id.in_(valid_ids) if valid_ids else True
+        ).delete(synchronize_session=False)
+
+        existing_ids = {gg.genre_id for gg in GameGenre.query.filter_by(game_id=game_id).all()}
+        to_add = valid_ids - existing_ids
+        for gid in to_add:
+            db.session.add(GameGenre(game_id=game_id, genre_id=gid))
+
+    try:
+        db.session.commit()
+        return jsonify(game.serialize()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error updating game: {str(e)}"}), 500
 
 @api.route('/games/<int:game_id>', methods=['DELETE'])
 def delete_game(game_id):
