@@ -17,12 +17,23 @@ export const GameRecommendations = () => {
     try {
       setLoading(true);
       setError(null);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Usuario no autenticado');
+        setLoading(false);
+        return;
+      }
 
       const preferencesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/games/recommendations/context`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         }
       });
+
+      if (preferencesResponse.status === 401) {
+        throw new Error('No autorizado. Inicie sesión nuevamente.');
+      }
 
       if (!preferencesResponse.ok) {
         throw new Error('Error al obtener preferencias del usuario');
@@ -89,8 +100,9 @@ export const GameRecommendations = () => {
     const data = await response.json();
     const allGames = data.results || [];
 
+    const excluded = preferences.excluded_rawg_ids || [];
     const filteredGames = allGames
-      .filter(game => !preferences.excluded_rawg_ids.includes(game.id))
+      .filter(game => !excluded.includes(game.id))
       .slice(0, 24) // 24 juegos = múltiplo perfecto para grids de 2, 3, 4, 6 columnas
       .map(game => ({
         id: game.id,
