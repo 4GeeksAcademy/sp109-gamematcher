@@ -11,6 +11,7 @@ from api.models import db
 from api.routes import api
 from api.admin import setup_admin
 from flask_jwt_extended import JWTManager
+from flask_cors import CORS
 
 
 # Detect environment
@@ -37,6 +38,7 @@ app.config["JWT_SECRET_KEY"] = os.getenv("FLASK_APP_KEY", "super-secret que debe
 db.init_app(app)
 MIGRATE = Migrate(app, db, compare_type=True)
 jwt = JWTManager(app)
+CORS(app)
 
 # Admin panel
 setup_admin(app)

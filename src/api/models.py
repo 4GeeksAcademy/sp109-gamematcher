@@ -5,8 +5,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 db = SQLAlchemy()
 
 # Users
-
-
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nickname = db.Column(db.String(120), unique=True, nullable=False)
@@ -28,8 +26,6 @@ class User(db.Model):
 
 
 # Games
-
-
 class Game(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -51,8 +47,6 @@ class Game(db.Model):
         }
 
 # Genres
-
-
 class Genre(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -66,8 +60,6 @@ class Genre(db.Model):
         }
 
 # Platforms
-
-
 class Platform(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -136,8 +128,6 @@ class AdminUser(db.Model):
         }
 
 # Platform-Preference
-
-
 class UserPlatformPreference(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(
@@ -217,7 +207,6 @@ class NonFavoriteGame(db.Model):
 
 
 # onboarding
-
 class OnboardingProgress(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(

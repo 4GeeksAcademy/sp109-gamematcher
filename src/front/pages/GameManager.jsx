@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
 import useGlobalReducer from "../hooks/useGlobalReducer";
+import AlertMessage from "../components/AlertMessage";
 
 export const GameManager = () => {
   const { store, dispatch } = useGlobalReducer();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showManualForm, setShowManualForm] = useState(false); // 🔽 INICI: estat per mostrar formulari manual
+  const [showManualForm, setShowManualForm] = useState(false);
   const [manualGame, setManualGame] = useState({
     name: "",
     description: "",
     released: "",
     background_image: "",
-    rating: ""
+    rating: "",
+    platforms: [],
+    genres: []
   });
-  const [alertMessage, setAlertMessage] = useState(null); // 🔼 FI
+  const [allPlatforms, setAllPlatforms] = useState([]);
+  const [allGenres, setAllGenres] = useState([]);
+  const [alert, setAlert] = useState(null);
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const rawgApiKey = import.meta.env.VITE_RAWG_API_KEY;
@@ -25,8 +30,22 @@ export const GameManager = () => {
     dispatch({ type: "set_games", payload: data });
   };
 
+  const loadOptions = async () => {
+    try {
+      const [platRes, genRes] = await Promise.all([
+        fetch(`${backendUrl}/api/platforms`),
+        fetch(`${backendUrl}/api/genres`)
+      ]);
+      setAllPlatforms(await platRes.json());
+      setAllGenres(await genRes.json());
+    } catch (err) {
+      console.error("Error cargando plataformas/géneros:", err);
+    }
+  };
+
   useEffect(() => {
     loadGames();
+    loadOptions();
   }, []);
 
   useEffect(() => {
@@ -35,7 +54,6 @@ export const GameManager = () => {
         setSearchResults([]);
         return;
       }
-
       setLoading(true);
       try {
         const res = await fetch(`https://api.rawg.io/api/games?search=${searchTerm}&key=${rawgApiKey}`);
@@ -47,20 +65,82 @@ export const GameManager = () => {
         setLoading(false);
       }
     };
-
     const delayDebounce = setTimeout(fetchRawgGames, 500);
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
-  const handleAddGame = async (game) => {
-    if (!game.id || !game.name) {
-      setAlertMessage("❌ Datos del juego incompletos.");
-      return;
+  // ------ HELPERS: assegurar que existeixen a BD i retornar IDs interns ------
+
+  const ensurePlatformsExist = async (names) => {
+    const norm = (s) => String(s || "").toLowerCase().trim();
+    const mapNow = new Map(allPlatforms.map(p => [norm(p.name), p.id]));
+    const missing = (names || []).filter(n => !mapNow.has(norm(n)));
+
+    // crea les que faltin (si no existeixen)
+    for (const name of missing) {
+      try {
+        await fetch(`${backendUrl}/api/platforms`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+      } catch (e) {
+        console.warn("No s'ha pogut crear la plataforma:", name, e);
+      }
     }
 
+    // recarrega llistat i torna IDs finals
+    const res = await fetch(`${backendUrl}/api/platforms`);
+    const updated = await res.json();
+    setAllPlatforms(updated);
+    const mapFinal = new Map(updated.map(p => [norm(p.name), p.id]));
+    return (names || []).map(n => mapFinal.get(norm(n))).filter(Boolean);
+  };
+
+  const ensureGenresExist = async (names) => {
+    const norm = (s) => String(s || "").toLowerCase().trim();
+    const mapNow = new Map(allGenres.map(g => [norm(g.name), g.id]));
+    const missing = (names || []).filter(n => !mapNow.has(norm(n)));
+
+    // crea els que faltin (si no existeixen)
+    for (const name of missing) {
+      try {
+        await fetch(`${backendUrl}/api/genres`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+      } catch (e) {
+        console.warn("No s'ha pogut crear el gènere:", name, e);
+      }
+    }
+
+    // recarrega llistat i torna IDs finals
+    const res = await fetch(`${backendUrl}/api/genres`);
+    const updated = await res.json();
+    setAllGenres(updated);
+    const mapFinal = new Map(updated.map(g => [norm(g.name), g.id]));
+    return (names || []).map(n => mapFinal.get(norm(n))).filter(Boolean);
+  };
+
+  // --------------------------------------------------------------------------
+
+  const handleAddGame = async (game) => {
+    if (!game.id || !game.name) {
+      setAlert({ type: "danger", message: "❌ Datos del juego incompletos." });
+      return;
+    }
     try {
       const detailRes = await fetch(`https://api.rawg.io/api/games/${game.id}?key=${rawgApiKey}`);
       const gameDetail = await detailRes.json();
+
+      // noms que dona RAWG
+      const rawgPlatformNames = (gameDetail.platforms || []).map(p => p.platform?.name).filter(Boolean);
+      const rawgGenreNames    = (gameDetail.genres || []).map(g => g.name).filter(Boolean);
+
+      // assegurem existència a BD i obtenim IDs interns
+      const platform_ids = await ensurePlatformsExist(rawgPlatformNames);
+      const genre_ids    = await ensureGenresExist(rawgGenreNames);
 
       const payload = {
         name: game.name,
@@ -68,7 +148,9 @@ export const GameManager = () => {
         background_image: game.background_image,
         released: game.released,
         rating: game.rating,
-        rawg_id: game.id
+        rawg_id: game.id,
+        platform_ids,
+        genre_ids
       };
 
       const res = await fetch(`${backendUrl}/api/games`, {
@@ -79,49 +161,86 @@ export const GameManager = () => {
 
       if (res.ok) {
         loadGames();
-        setAlertMessage("✅ Juego añadido correctamente.");
+        setAlert({ type: "success", message: "✅ Juego añadido correctamente." });
       } else {
-        setAlertMessage("❌ Error al añadir juego.");
+        setAlert({ type: "danger", message: "❌ Error al añadir juego." });
       }
     } catch (err) {
       console.error("Error al obtener detalles del juego:", err);
-      setAlertMessage("❌ Error al obtener detalles del juego.");
+      setAlert({ type: "danger", message: "❌ Error al obtener detalles del juego." });
     }
   };
 
-  // 🔽 INICI: gestió de formulari de creació manual
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     if (!manualGame.name.trim()) {
-      setAlertMessage("❌ El nombre del juego es obligatorio.");
+      setAlert({ type: "danger", message: "❌ El nombre del juego es obligatorio." });
       return;
     }
+
+    const payload = {
+      name: manualGame.name,
+      description: manualGame.description || "",
+      released: manualGame.released || "",
+      background_image: manualGame.background_image || "",
+      rating: manualGame.rating || null,
+      platform_ids: (manualGame.platforms || []).map(Number),
+      genre_ids: (manualGame.genres || []).map(Number)
+    };
 
     try {
       const res = await fetch(`${backendUrl}/api/games`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(manualGame),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        setAlertMessage("✅ Juego creado manualmente.");
+        await res.json();
+        setAlert({ type: "success", message: "✅ Juego creado manualmente." });
         loadGames();
-        setManualGame({ name: "", description: "", released: "", background_image: "", rating: "" });
+        setManualGame({
+          name: "",
+          description: "",
+          released: "",
+          background_image: "",
+          rating: "",
+          platforms: [],
+          genres: []
+        });
         setShowManualForm(false);
       } else {
-        setAlertMessage("❌ Error al crear juego manual.");
+        const errorData = await res.json();
+        console.error("❌ Error backend:", errorData);
+        setAlert({ type: "danger", message: "❌ Error al crear juego manual." });
       }
     } catch (err) {
-      console.error("Error:", err);
-      setAlertMessage("❌ Error en la conexión.");
+      console.error("❌ Error conexión:", err);
+      setAlert({ type: "danger", message: "❌ Error en la conexión." });
     }
   };
 
   const handleManualChange = (e) => {
-    setManualGame({ ...manualGame, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "rating") {
+      const num = parseFloat(value);
+      if (num > 5) return;
+    }
+    setManualGame({ ...manualGame, [name]: value });
   };
-  // 🔼 FI
+
+  const handleCheckboxChange = (e) => {
+    const { name, value, checked } = e.target; // "platforms" o "genres"
+    setManualGame((prev) => {
+      const prevArr = Array.isArray(prev[name]) ? prev[name] : [];
+      if (checked) {
+        if (prevArr.includes(value)) return prev;
+        return { ...prev, [name]: [...prevArr, value] };
+      } else {
+        return { ...prev, [name]: prevArr.filter((v) => v !== value) };
+      }
+    });
+  };
 
   const handleDelete = async (id) => {
     const res = await fetch(`${backendUrl}/api/games/${id}`, { method: "DELETE" });
@@ -132,35 +251,8 @@ export const GameManager = () => {
     <div className="container py-4">
       <h2>Añade juegos a la base de datos</h2>
 
-      {alertMessage && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 9999 }}
-        >
-          <div
-            className="alert alert-light alert-dismissible fade show text-center"
-            role="alert"
-            style={{
-              width: "500px",
-              maxWidth: "90vw",
-              padding: "2.5rem 2rem",
-              fontSize: "1.5rem",
-              backgroundColor: "white",
-              boxShadow: "0 0 20px rgba(0,0,0,0.3)",
-              position: "relative",
-            }}
-          >
-            <div className="mb-3">{alertMessage}</div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setAlertMessage(null)}
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
+      <AlertMessage message={alert?.message} type={alert?.type} onClose={() => setAlert(null)} />
+
       <input
         type="text"
         className="form-control my-3"
@@ -233,17 +325,61 @@ export const GameManager = () => {
             />
           </div>
           <div className="mb-3">
-            <label className="form-label">Puntuación</label>
+            <label className="form-label">Puntuación (hasta 5)</label>
             <input
               type="number"
               step="0.1"
-              min="0"
-              max="5"
               name="rating"
               className="form-control"
               value={manualGame.rating}
               onChange={handleManualChange}
             />
+          </div>
+          <div className="mb-3">
+            <label className="form-label d-block">Plataformas</label>
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+              {allPlatforms.map((p) => (
+                <div key={p.id} className="col">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id={`platform-${p.id}`}
+                      name="platforms"
+                      value={String(p.id)}
+                      checked={manualGame.platforms.includes(String(p.id))}
+                      onChange={handleCheckboxChange}
+                    />
+                    <label className="form-check-label" htmlFor={`platform-${p.id}`}>
+                      {p.name}
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mb-3">
+            <label className="form-label d-block">Géneros</label>
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+              {allGenres.map((g) => (
+                <div key={g.id} className="col">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id={`genre-${g.id}`}
+                      name="genres"
+                      value={String(g.id)}
+                      checked={manualGame.genres.includes(String(g.id))}
+                      onChange={handleCheckboxChange}
+                    />
+                    <label className="form-check-label" htmlFor={`genre-${g.id}`}>
+                      {g.name}
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           <button type="submit" className="btn btn-success me-2">Crear juego</button>
           <button type="button" className="btn btn-secondary" onClick={() => setShowManualForm(false)}>Cancelar</button>
