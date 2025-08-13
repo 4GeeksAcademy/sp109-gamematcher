@@ -23,11 +23,15 @@ CORS(
 )
 
 # ------------------------------ Misc ------------------------------ #
+
+
 @api.route('/hello', methods=['GET', 'POST'])
 def handle_hello():
     return jsonify({"message": "Hello! Desde el back"}), 200
 
 # ------------------------------ Games ----------------------------- #
+
+
 @api.route('/games', methods=['GET'])
 def get_all_games():
     games = Game.query.all()
@@ -82,7 +86,8 @@ def create_game():
         for pid in platform_ids:
             platform = Platform.query.get(pid)
             if platform:
-                db.session.add(GamePlatform(game_id=new_game.id, platform_id=pid))
+                db.session.add(GamePlatform(
+                    game_id=new_game.id, platform_id=pid))
             else:
                 print(f"⚠️ Plataforma con id {pid} no encontrada")
     elif platforms_names:
@@ -91,7 +96,8 @@ def create_game():
                 func.lower(Platform.name) == pname.lower()
             ).first()
             if platform:
-                db.session.add(GamePlatform(game_id=new_game.id, platform_id=platform.id))
+                db.session.add(GamePlatform(
+                    game_id=new_game.id, platform_id=platform.id))
             else:
                 print(f"⚠️ Plataforma con nombre '{pname}' no encontrada")
 
@@ -112,7 +118,8 @@ def create_game():
                 func.lower(Genre.name) == gname.lower()
             ).first()
             if genre:
-                db.session.add(GameGenre(game_id=new_game.id, genre_id=genre.id))
+                db.session.add(
+                    GameGenre(game_id=new_game.id, genre_id=genre.id))
             else:
                 print(f"⚠️ Género con nombre '{gname}' no encontrado")
 
@@ -128,6 +135,8 @@ def create_game():
 
 @api.route('/games/<int:game_id>', methods=['PUT'])
 def update_game(game_id):
+    data = request.get_json() or {}
+
     game = Game.query.get(game_id)
     if not game:
         raise APIException("Game not found", status_code=404)
@@ -136,6 +145,57 @@ def update_game(game_id):
     game.description = data.get("description", game.description)
     db.session.commit()
     return jsonify(game.serialize()), 200
+
+    # PUT para campos normales
+    basic_fields = ["name", "description",
+                    "background_image", "released", "rating", "rawg_id"]
+    for f in basic_fields:
+        if f in data:
+            setattr(game, f, data[f])
+
+    # Para editar Platforms
+    platform_ids = data.get("platform_ids", None)
+    if platform_ids is not None:
+        valid_platforms = Platform.query.filter(
+            Platform.id.in_(platform_ids)).all()
+        valid_ids = {p.id for p in valid_platforms}
+
+        # Elimina relaciones al editarlo
+        db.session.query(GamePlatform).filter(
+            GamePlatform.game_id == game_id,
+            ~GamePlatform.platform_id.in_(valid_ids) if valid_ids else True
+        ).delete(synchronize_session=False)
+
+        # Agrega relaciones
+        existing_ids = {gp.platform_id for gp in GamePlatform.query.filter_by(
+            game_id=game_id).all()}
+        to_add = valid_ids - existing_ids
+        for pid in to_add:
+            db.session.add(GamePlatform(game_id=game_id, platform_id=pid))
+
+    # Para editar Genres
+    genre_ids = data.get("genre_ids", None)
+    if genre_ids is not None:
+        valid_genres = Genre.query.filter(Genre.id.in_(genre_ids)).all()
+        valid_ids = {g.id for g in valid_genres}
+
+        db.session.query(GameGenre).filter(
+            GameGenre.game_id == game_id,
+            ~GameGenre.genre_id.in_(valid_ids) if valid_ids else True
+        ).delete(synchronize_session=False)
+
+        existing_ids = {gg.genre_id for gg in GameGenre.query.filter_by(
+            game_id=game_id).all()}
+        to_add = valid_ids - existing_ids
+        for gid in to_add:
+            db.session.add(GameGenre(game_id=game_id, genre_id=gid))
+
+    try:
+        db.session.commit()
+        return jsonify(game.serialize()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error updating game: {str(e)}"}), 500
 
 
 @api.route('/games/<int:game_id>', methods=['DELETE'])
@@ -158,6 +218,8 @@ def delete_game(game_id):
         raise APIException(f"Error deleting game: {str(e)}", status_code=500)
 
 # ------------------------------ Genres ---------------------------- #
+
+
 @api.route('/genres', methods=['GET'])
 def get_all_genres():
     genres = Genre.query.all()
@@ -179,7 +241,8 @@ def create_genre():
     if not name:
         raise APIException("Genre name is required", status_code=400)
 
-    existing = Genre.query.filter(func.lower(Genre.name) == name.lower()).first()
+    existing = Genre.query.filter(
+        func.lower(Genre.name) == name.lower()).first()
     if existing:
         return jsonify(existing.serialize()), 200
 
@@ -221,6 +284,8 @@ def delete_genre(genre_id):
         raise APIException(f"Error deleting genre: {str(e)}", status_code=500)
 
 # ------------------------------ Platforms ------------------------- #
+
+
 @api.route('/platforms', methods=['GET'])
 def get_all_platforms():
     platforms = Platform.query.all()
@@ -242,7 +307,8 @@ def create_platform():
     if not name:
         raise APIException("Platform name is required", status_code=400)
 
-    existing = Platform.query.filter(func.lower(Platform.name) == name.lower()).first()
+    existing = Platform.query.filter(
+        func.lower(Platform.name) == name.lower()).first()
     if existing:
         return jsonify(existing.serialize()), 200
 
@@ -264,7 +330,8 @@ def update_platform(platform_id):
     data = request.get_json() or {}
     platform.name = data.get("name", platform.name)
     platform.price = data.get("price", platform.price)
-    platform.image = data.get("image", platform.image)  # <<--- NUEVO: soporta imagen
+    # <<--- NUEVO: soporta imagen
+    platform.image = data.get("image", platform.image)
     db.session.commit()
     return jsonify(platform.serialize()), 200
 
@@ -277,15 +344,19 @@ def delete_platform(platform_id):
 
     try:
         GamePlatform.query.filter_by(platform_id=platform_id).delete()
-        UserPlatformPreference.query.filter_by(platform_id=platform_id).delete()
+        UserPlatformPreference.query.filter_by(
+            platform_id=platform_id).delete()
         db.session.delete(platform)
         db.session.commit()
         return jsonify({"message": f"Platform {platform_id} and all related data deleted"}), 200
     except Exception as e:
         db.session.rollback()
-        raise APIException(f"Error deleting platform: {str(e)}", status_code=500)
+        raise APIException(
+            f"Error deleting platform: {str(e)}", status_code=500)
 
 # ------------------------------ Users ----------------------------- #
+
+
 @api.route('/users', methods=['GET'])
 def get_all_users():
     users = User.query.all()
@@ -304,8 +375,10 @@ def get_one_user(user_id):
 def create_user():
     data = request.get_json() or {}
     if not data.get("nickname") or not data.get("email") or not data.get("password"):
-        raise APIException("Nickname, email, and password are required", status_code=400)
-    user = User(nickname=data["nickname"], email=data["email"], password=data["password"])
+        raise APIException(
+            "Nickname, email, and password are required", status_code=400)
+    user = User(nickname=data["nickname"],
+                email=data["email"], password=data["password"])
     db.session.add(user)
     db.session.commit()
     return jsonify(user.serialize()), 201
@@ -332,7 +405,8 @@ def delete_user(user_id):
     try:
         UserPlatformPreference.query.filter_by(user_id=user_id).delete()
         UserGenrePreference.query.filter_by(user_id=user_id).delete()
-        user_favorites = UserGameFavorite.query.filter_by(user_id=user_id).all()
+        user_favorites = UserGameFavorite.query.filter_by(
+            user_id=user_id).all()
         for fav in user_favorites:
             db.session.delete(fav)
         NonFavoriteGame.query.filter_by(user_id=user_id).delete()
@@ -345,6 +419,8 @@ def delete_user(user_id):
         raise APIException(f"Error deleting user: {str(e)}", status_code=500)
 
 # ----------------------- Game-Platform links ---------------------- #
+
+
 @api.route('/game-platforms', methods=['GET'])
 def get_all_game_platforms():
     links = GamePlatform.query.all()
@@ -362,7 +438,8 @@ def create_game_platform():
     if not Game.query.get(game_id) or not Platform.query.get(platform_id):
         return jsonify({"error": "Invalid game_id or platform_id"}), 404
 
-    existing = GamePlatform.query.filter_by(game_id=game_id, platform_id=platform_id).first()
+    existing = GamePlatform.query.filter_by(
+        game_id=game_id, platform_id=platform_id).first()
     if existing:
         return jsonify(existing.serialize()), 200
 
@@ -394,6 +471,8 @@ def get_games_for_platform(platform_id):
     return jsonify([l.serialize() for l in links]), 200
 
 # ----------------------- Admin Users ------------------------------ #
+
+
 @api.route('/admins', methods=['GET'])
 def get_all_admin_users():
     admins = AdminUser.query.all()
@@ -413,7 +492,8 @@ def create_admin_user():
     data = request.get_json() or {}
     if not data.get("email") or not data.get("name"):
         raise APIException("Missing fields", status_code=400)
-    admin = AdminUser(email=data["email"], name=data["name"], password=data["password"])
+    admin = AdminUser(email=data["email"],
+                      name=data["name"], password=data["password"])
     db.session.add(admin)
     db.session.commit()
     return jsonify(admin.serialize()), 201
@@ -442,6 +522,8 @@ def delete_admin_user(admin_id):
     return jsonify({"message": f"Admin {admin_id} deleted"}), 200
 
 # ----------------------- Game-Genre links ------------------------- #
+
+
 @api.route('/game-genres', methods=['GET'])
 def get_all_game_genres():
     links = GameGenre.query.all()
@@ -451,8 +533,10 @@ def get_all_game_genres():
 @api.route('/game-genres', methods=['POST'])
 def create_game_genre():
     data = request.get_json() or {}
-    game_id = int(data.get("game_id")) if data.get("game_id") is not None else None
-    genre_id = int(data.get("genre_id")) if data.get("genre_id") is not None else None
+    game_id = int(data.get("game_id")) if data.get(
+        "game_id") is not None else None
+    genre_id = int(data.get("genre_id")) if data.get(
+        "genre_id") is not None else None
 
     if not game_id or not genre_id:
         return jsonify({"error": "game_id and genre_id are required"}), 400
@@ -460,7 +544,8 @@ def create_game_genre():
     if not Game.query.get(game_id) or not Genre.query.get(genre_id):
         return jsonify({"error": "Invalid game_id or genre_id"}), 404
 
-    existing = GameGenre.query.filter_by(game_id=game_id, genre_id=genre_id).first()
+    existing = GameGenre.query.filter_by(
+        game_id=game_id, genre_id=genre_id).first()
     if existing:
         return jsonify(existing.serialize()), 200
 
@@ -492,13 +577,16 @@ def get_games_for_genre(genre_id):
     return jsonify([l.serialize() for l in links]), 200
 
 # ----------------------- User-Platform prefs ---------------------- #
+
+
 @api.route('/user-platform-preferences', methods=['GET'])
 def get_user_platform_preferences():
     user_id = request.args.get('user_id', type=int)
     print(">>> Received user_id:", user_id)
 
     if user_id is not None:
-        preferences = UserPlatformPreference.query.filter_by(user_id=user_id).all()
+        preferences = UserPlatformPreference.query.filter_by(
+            user_id=user_id).all()
     else:
         preferences = UserPlatformPreference.query.all()
 
@@ -521,7 +609,8 @@ def create_user_platform_preference():
     if existing_preference:
         return jsonify(existing_preference.serialize()), 200
 
-    new_preference = UserPlatformPreference(user_id=user_id, platform_id=platform_id)
+    new_preference = UserPlatformPreference(
+        user_id=user_id, platform_id=platform_id)
     db.session.add(new_preference)
     db.session.commit()
     return jsonify(new_preference.serialize()), 201
@@ -545,10 +634,13 @@ def get_preferences_for_user(user_id):
 
 @api.route('/user-platform-preferences/platform/<int:platform_id>', methods=['GET'])
 def get_users_for_platform_preference(platform_id):
-    prefs = UserPlatformPreference.query.filter_by(platform_id=platform_id).all()
+    prefs = UserPlatformPreference.query.filter_by(
+        platform_id=platform_id).all()
     return jsonify([p.serialize() for p in prefs]), 200
 
 # ----------------------- Favorites / Non-Favorites ---------------- #
+
+
 @api.route('/favorites', methods=['GET'])
 def get_all_favorites():
     favs = UserGameFavorite.query.all()
@@ -651,11 +743,14 @@ def get_all_non_favorites():
     return jsonify([r.serialize() for r in rels]), 200
 
 # ----------------------- Auth ------------------------------ #
+
+
 @api.route("/admin-login", methods=["POST"])
 def admin_login():
     name = request.json.get("name")
     password = request.json.get("password")
-    admin = db.session.execute(select(AdminUser).where(AdminUser.name == name)).scalar_one_or_none()
+    admin = db.session.execute(select(AdminUser).where(
+        AdminUser.name == name)).scalar_one_or_none()
     if admin is None or password != admin.password:
         return jsonify({"msg": "Nombre o contraseña incorrectos"}), 401
     access_token = create_access_token(identity=name)
@@ -666,19 +761,23 @@ def admin_login():
 def user_login():
     nickname = request.json.get("nickname")
     password = request.json.get("password")
-    user = db.session.execute(select(User).where(User.nickname == nickname)).scalar_one_or_none()
+    user = db.session.execute(select(User).where(
+        User.nickname == nickname)).scalar_one_or_none()
     if user is None or password != user.password:
         return jsonify({"msg": "Nickname o contraseña incorrectos"}), 401
     access_token = create_access_token(identity=nickname)
     return jsonify(access_token=access_token, user_type="user"), 200
 
 # ----------------------- User-Genre prefs ------------------------- #
+
+
 @api.route('/user-genre-preferences', methods=['GET'])
 def get_all_user_genre_preferences():
     user_id = request.args.get('user_id', type=int)
 
     if user_id is not None:
-        preferences = UserGenrePreference.query.filter_by(user_id=user_id).all()
+        preferences = UserGenrePreference.query.filter_by(
+            user_id=user_id).all()
     else:
         preferences = UserGenrePreference.query.all()
 
@@ -757,6 +856,8 @@ def delete_user_genre_preference(id):
     return jsonify({"message": f"Deleted UserGenrePreference with id {id}"}), 200
 
 # ----------------------- Admin bootstrap (dev) -------------------- #
+
+
 @api.route("/create-admin", methods=["POST"])
 def create_admin():
     email = request.json.get("email", None)
@@ -779,6 +880,8 @@ def create_admin():
     return jsonify({"msg": "Admin creado exitosamente", "email": email}), 201
 
 # ----------------------- Verify token (ÚNICO) --------------------- #
+
+
 @api.route("/verify-token", methods=["GET"])
 @jwt_required()
 def verify_token():
@@ -819,10 +922,13 @@ def verify_token():
     return jsonify({"msg": "Token inválido o usuario no encontrado"}), 401
 
 # ----------------------- Recommendations ------------------------- #
+
+
 def get_user_preferences(user_id):
     genre_prefs = UserGenrePreference.query.filter_by(user_id=user_id).all()
     preferred_genre_ids = [p.genre_id for p in genre_prefs]
-    platform_prefs = UserPlatformPreference.query.filter_by(user_id=user_id).all()
+    platform_prefs = UserPlatformPreference.query.filter_by(
+        user_id=user_id).all()
     preferred_platform_ids = [p.platform_id for p in platform_prefs]
     return preferred_genre_ids, preferred_platform_ids
 
@@ -858,11 +964,13 @@ def get_user_excluded_rawg_games(user_id):
                 Game.rawg_id.isnot(None)
             )
         ).scalars().all()
-        excluded_rawg_ids.extend([non_fav for non_fav in non_favorites if non_fav])
+        excluded_rawg_ids.extend(
+            [non_fav for non_fav in non_favorites if non_fav])
 
         excluded_rawg_ids = list(set(excluded_rawg_ids))
 
-        print(f"🔍 Usuario {user_id}: {len(excluded_rawg_ids)} juegos excluidos por RAWG ID")
+        print(
+            f"🔍 Usuario {user_id}: {len(excluded_rawg_ids)} juegos excluidos por RAWG ID")
         print(f"📋 IDs excluidos: {excluded_rawg_ids}")
 
         return excluded_rawg_ids
@@ -885,7 +993,8 @@ def get_game_recommendations_context():
         if not user:
             return jsonify({"error": "Usuario no encontrado"}), 404
 
-        preferred_genre_ids, preferred_platform_ids = get_user_preferences(user.id)
+        preferred_genre_ids, preferred_platform_ids = get_user_preferences(
+            user.id)
         excluded_rawg_ids = get_user_excluded_rawg_games(user.id)
 
         preferred_genres = []
@@ -928,16 +1037,19 @@ def get_game_recommendations():
         if not user:
             return jsonify({"error": "Usuario no encontrado"}), 404
 
-        preferred_genre_ids, preferred_platform_ids = get_user_preferences(user.id)
+        preferred_genre_ids, preferred_platform_ids = get_user_preferences(
+            user.id)
         excluded_ids = get_user_excluded_games(user.id)
 
         query = Game.query
         if excluded_ids:
             query = query.filter(~Game.id.in_(excluded_ids))
         if preferred_genre_ids:
-            query = query.join(GameGenre).filter(GameGenre.genre_id.in_(preferred_genre_ids))
+            query = query.join(GameGenre).filter(
+                GameGenre.genre_id.in_(preferred_genre_ids))
         if preferred_platform_ids:
-            query = query.join(GamePlatform).filter(GamePlatform.platform_id.in_(preferred_platform_ids))
+            query = query.join(GamePlatform).filter(
+                GamePlatform.platform_id.in_(preferred_platform_ids))
 
         recommended = query.order_by(Game.rating.desc()).limit(25).all()
 
@@ -945,7 +1057,8 @@ def get_game_recommendations():
             remaining = 25 - len(recommended)
             already = [g.id for g in recommended]
             excluded_ids = list(set(excluded_ids + already))
-            extra = Game.query.filter(~Game.id.in_(excluded_ids)).order_by(Game.rating.desc()).limit(remaining).all()
+            extra = Game.query.filter(~Game.id.in_(excluded_ids)).order_by(
+                Game.rating.desc()).limit(remaining).all()
             recommended.extend(extra)
 
         return jsonify([g.serialize() for g in recommended]), 200
@@ -953,6 +1066,8 @@ def get_game_recommendations():
         return jsonify({"error": f"Error al generar recomendaciones: {str(e)}"}), 500
 
 # ----------------------- Profile Image --------------------------- #
+
+
 @api.route('/users/<int:user_id>/profile-image', methods=['PUT'])
 @jwt_required()
 def update_profile_image(user_id):
@@ -978,6 +1093,8 @@ def update_profile_image(user_id):
     return jsonify({"msg": "Profile image updated successfully", "profile_image_url": user.profile_image_url}), 200
 
 # ----------------------- Onboarding Routes ----------------------- #
+
+
 @api.route('/onboarding/status/<int:user_id>', methods=['GET'])
 def get_onboarding_status(user_id):
     """Obtiene el estado del onboarding del usuario"""
@@ -1038,4 +1155,3 @@ def get_onboarding_games_sample():
     if not games:
         return jsonify({"error": "No games available"}), 404
     return jsonify([game.serialize() for game in games]), 200
-
