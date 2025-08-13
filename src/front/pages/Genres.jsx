@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import useGlobalReducer from "../hooks/useGlobalReducer";
+import axios from "axios";
 
 export const Genres = () => {
   const { store, dispatch } = useGlobalReducer();
@@ -7,6 +8,8 @@ export const Genres = () => {
   const [editingId, setEditingId] = useState(null);
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
   const loadGenres = async () => {
     const res = await fetch(`${backendUrl}/api/genres`);
@@ -17,6 +20,26 @@ export const Genres = () => {
   useEffect(() => {
     loadGenres();
   }, []);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", uploadPreset);
+
+    try {
+      const res = await axios.post(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        formData
+      );
+      setForm((prev) => ({ ...prev, image: res.data.secure_url }));
+    } catch (error) {
+      console.error("Error uploading to Cloudinary", error);
+      alert("Error uploading image");
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,12 +83,24 @@ export const Genres = () => {
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           required
         />
-        <textarea
+
+        {/* Subida de imagen a Cloudinary */}
+        <input
+          type="file"
           className="form-control my-2"
-          placeholder="Image URL (optional)"
-          value={form.image}
-          onChange={(e) => setForm({ ...form, image: e.target.value })}
-        ></textarea>
+          accept="image/*"
+          onChange={handleFileChange}
+        />
+        {form.image && (
+          <div className="my-2">
+            <img
+              src={form.image}
+              alt="Preview"
+              style={{ maxHeight: "150px", borderRadius: "8px" }}
+            />
+          </div>
+        )}
+
         <button className="btn btn-success" type="submit">
           {editingId ? "Update Genre" : "Add Genre"}
         </button>
@@ -73,14 +108,22 @@ export const Genres = () => {
 
       <ul className="list-group">
         {store.genres.map((genre) => (
-          <li key={genre.id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+          <li
+            key={genre.id}
+            className="list-group-item d-flex justify-content-between align-items-center flex-wrap"
+          >
             <div className="d-flex align-items-center gap-3">
-              <p className="mb-0">{genre.image}</p>
+              {genre.image ? (
+                <img
+                  src={genre.image}
+                  alt={genre.name}
+                  style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "8px" }}
+                />
+              ) : (
+                <span className="text-muted">No image</span>
+              )}
               <div>
                 <strong>{genre.name}</strong>
-                <p className="mb-0 text-muted" style={{ fontSize: "0.9rem", maxWidth: "250px", wordBreak: "break-word" }}>
-                  {genre.image || "Imagen por defecto"}
-                </p>
               </div>
             </div>
             <div className="d-flex flex-column gap-2">
@@ -105,4 +148,6 @@ export const Genres = () => {
     </div>
   );
 };
+
+
 
