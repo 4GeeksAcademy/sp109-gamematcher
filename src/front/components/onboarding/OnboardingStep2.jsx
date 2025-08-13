@@ -9,7 +9,6 @@ const OnboardingStep2 = ({
   const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Cargar géneros disponibles del backend
   useEffect(() => {
     loadGenres();
   }, []);
@@ -44,8 +43,7 @@ const OnboardingStep2 = ({
     onNext();
   };
 
-  // Mapeo fijo de géneros basado en RAWG (lista oficial completa)
-  const GENRE_ICONS = {
+  const FALLBACK_ICONS = {
     Action: "fas fa-fist-raised",
     Indie: "fas fa-heart",
     Adventure: "fas fa-map",
@@ -64,12 +62,14 @@ const OnboardingStep2 = ({
     Family: "fas fa-users",
     "Board Games": "fas fa-chess-board",
     Educational: "fas fa-graduation-cap",
-    Card: "fas fa-cards",
+    Card: "fas fa-clone",
   };
+  const getFallbackIcon = (name) => FALLBACK_ICONS[name] || "fas fa-gamepad";
 
-  // Iconos para cada género
-  const getGenreIcon = (genreName) => {
-    return GENRE_ICONS[genreName] || "fas fa-gamepad";
+  const handleImgError = (e) => {
+    e.target.style.display = 'none';
+    const iconEl = e.target.parentElement?.querySelector('[data-fallback-icon]');
+    if (iconEl) iconEl.style.display = 'inline-block';
   };
 
   if (loading) {
@@ -98,34 +98,44 @@ const OnboardingStep2 = ({
               </p>
             </div>
 
-            {/* Grid de géneros */}
             <div className="row g-3 mb-4">
-              {genres.map((genre) => (
-                <div key={genre.id} className="col-md-4 col-lg-3">
-                  <div
-                    className={`card h-100 border-2 cursor-pointer ${
-                      selectedGenres.includes(genre.id)
-                        ? "border-primary bg-primary text-white"
-                        : "border-light"
-                    }`}
-                    onClick={() => handleGenreToggle(genre.id)}
-                    style={{ cursor: "pointer", transition: "all 0.3s ease" }}
-                  >
-                    <div className="card-body text-center p-3">
-                      <i
-                        className={`${getGenreIcon(genre.name)} fa-2x mb-2`}
-                      ></i>
-                      <h6 className="card-title mb-1 small">{genre.name}</h6>
-                      {selectedGenres.includes(genre.id) && (
-                        <i className="fas fa-check-circle mt-1"></i>
-                      )}
+              {genres.map((genre) => {
+                const isSelected = selectedGenres.includes(genre.id);
+                return (
+                  <div key={genre.id} className="col-md-4 col-lg-3">
+                    <div
+                      className={`card h-100 border-2 ${isSelected ? 'border-primary bg-primary text-white' : 'border-light'} `}
+                      onClick={() => handleGenreToggle(genre.id)}
+                      style={{ cursor: 'pointer', transition: 'all 0.25s ease', position: 'relative' }}
+                    >
+                      <div className="card-body text-center p-3 d-flex flex-column align-items-center justify-content-start">
+                        {genre.image && (
+                          <img
+                            src={genre.image}
+                            alt={genre.name}
+                            className="rounded mb-2"
+                            style={{ width: 64, height: 64, objectFit: 'cover', boxShadow: '0 0 4px rgba(0,0,0,0.15)' }}
+                            onError={handleImgError}
+                          />
+                        )}
+                        <i
+                          data-fallback-icon
+                          className={`${getFallbackIcon(genre.name)} fa-2x mb-2 ${genre.image ? '' : ''}`}
+                          style={{ display: genre.image ? 'none' : 'inline-block' }}
+                        ></i>
+                        <h6 className="card-title mb-1 small text-truncate" style={{ maxWidth: '100%' }}>
+                          {genre.name}
+                        </h6>
+                        {isSelected && (
+                          <i className="fas fa-check-circle mt-1"></i>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Contador de selecciones */}
             <div className="text-center mb-4">
               <small className="text-muted">
                 {selectedGenres.length} género
@@ -134,7 +144,6 @@ const OnboardingStep2 = ({
               </small>
             </div>
 
-            {/* Botones de navegación */}
             <div className="d-flex justify-content-between">
               <button
                 className="btn btn-outline-secondary btn-lg px-4"
