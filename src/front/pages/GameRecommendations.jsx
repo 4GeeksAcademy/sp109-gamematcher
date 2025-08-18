@@ -159,7 +159,7 @@ export const GameRecommendations = () => {
               </p>
               <div className="row">
                 {games.map(game => (
-                  <div key={game.id} className="col-sm-6 col-md-4 col-lg-3 mb-4">
+                  <div key={game.id} className="col-12 col-md-4 col-lg-4 mb-4">
                     <GameCard
                       game={game}
                       onClick={() => handleGameClick(game)}
