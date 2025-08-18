@@ -1,0 +1,12 @@
+/* Gradient principal */
+.bg-gradient-primary {
+  background: linear-gradient(50deg, #6e00ff 0, #bb00ff 100%) !important;
+}
+
+/* Utilidades visuales de la landing */
+.hero-device-mockup {
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 1rem;
+}
+.object-fit-cover { object-fit: cover; }
+.py-lg-6 { padding-top: 5rem!important; padding-bottom: 5rem!important; }

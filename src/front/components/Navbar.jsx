@@ -1,13 +1,14 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+
 export const Navbar = () => {
   const { isAuthenticated, user, logout, onboardingCompleted } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    navigate("/"); // Redirige al home después de logout
+    navigate("/"); // A la landing después de logout
   };
 
   const isAdmin = isAuthenticated && user?.role === "admin";
@@ -15,152 +16,177 @@ export const Navbar = () => {
   const inOnboarding = isUser && !onboardingCompleted;
 
   return (
-    <nav className="navbar navbar-light bg-light">
+    <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
       <div className="container">
-        <Link to="/" className="navbar-brand mb-0 h1">
-          Game Matcher
+        <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
+         
+          <span className="fw-bold">Game Matcher</span>
         </Link>
 
-        <div className="ms-auto d-flex align-items-center">
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#mainNav"
+          aria-controls="mainNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
 
-          {/* Botón Base de Datos: oculto durante onboarding de usuario */}
-          {!(inOnboarding && isUser) && (
-            <Link to="/local-games" className="me-1">
-              <button className="btn btn-outline-primary m-1">
-                <i className="fas fa-database"></i> Todos los juegos
-              </button>
-            </Link>
-          )}
+        <div className="collapse navbar-collapse" id="mainNav">
+          {/* LEFT SIDE LINKS */}
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+            {/* --- Público (no autenticado): solo enlaces informativos --- */}
+            {!isAuthenticated && (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/about">About us</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/team">Our team</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/contact">Contact</Link>
+                </li>
+              </>
+            )}
 
-          {/* --- No autenticado --- */}
-          {!isAuthenticated && (
-            <Link to="/login">
-              <button className="btn btn-outline-success m-1">
-                <i className="fas fa-sign-in-alt"></i> Login
-              </button>
-            </Link>
-          )}
-
-          {/* --- Autenticado --- */}
-          {isAuthenticated && (
-            <>
-              {/* Saludo */}
-              <span className="text-muted m-1">
-                <i className="fas fa-user"></i>{" "}
-                Hola, {user?.name || user?.nickname || "Usuario"}
-              </span>
-
-              {/* Durante onboarding: solo Logout */}
-              {inOnboarding ? (
-                <>
-                  <span className="text-muted m-1">
-                    <i className="fas fa-user-clock"></i>{" "}
-                    Completando configuración inicial...
-                  </span>
-                  <button className="btn btn-outline-danger m-1" onClick={handleLogout}>
-                    <i className="fas fa-sign-out-alt"></i> Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  {/* --- Rutas para USER (no admin) --- */}
-                  {isUser && (
-                    <>
-                      <Link to="/recommendations">
-                        <button className="btn btn-outline-success m-1">
-                          <i className="fas fa-star"></i> Recomendaciones
-                        </button>
-                      </Link>
-                      <Link to="/user-game-favorites">
-                        <button className="btn btn-outline-primary m-1">
-                          <i className="fas fa-heart"></i> Mis Favoritos
-                        </button>
-                      </Link>
-                      <Link to="/user-platform-preferences">
-                        <button className="btn btn-outline-primary m-1">
-                          <i className="fas fa-desktop"></i> Mis Plataformas
-                        </button>
-                      </Link>
-                      <Link to="/user-genre-preferences">
-                        <button className="btn btn-outline-primary m-1">
-                          <i className="fas fa-tags"></i> Mis Géneros
-                        </button>
-                      </Link>
-                      <Link to="/users/non-favorites">
-                        <button className="btn btn-outline-primary m-1">
-                          <i className="fas fa-times-circle"></i> No Favoritos
-                        </button>
-                      </Link>
-                    </>
-                  )}
-
-                  {/* --- Rutas para ADMIN --- */}
-                  {isAdmin && (
-                    <>
-                      <Link to="/games">
-                        <button className="btn btn-outline-primary m-1">
-                          <i className="fas fa-gamepad"></i> Games
-                        </button>
-                      </Link>
-                      <Link to="/genres">
-                        <button className="btn btn-outline-primary m-1">
-                          <i className="fas fa-tags"></i> Genres
-                        </button>
-                      </Link>
-                      <Link to="/platforms">
-                        <button className="btn btn-outline-primary m-1">
-                          <i className="fas fa-desktop"></i> Platforms
-                        </button>
-                      </Link>
-                      <Link to="/users">
-                        <button className="btn btn-outline-warning m-1">
-                          <i className="fas fa-users"></i> Users
-                        </button>
-                      </Link>
-                      <Link to="/admins">
-                        <button className="btn btn-outline-warning m-1">
-                          <i className="fas fa-user-shield"></i> Admins
-                        </button>
-                      </Link>
-                      <Link to="/game-platforms">
-                        <button className="btn btn-outline-warning m-1">
-                          <i className="fas fa-link"></i> Game-Platform
-                        </button>
-                      </Link>
-                      <Link to="/game-genres">
-                        <button className="btn btn-outline-warning m-1">
-                          <i className="fas fa-link"></i> Game-Genres
-                        </button>
-                      </Link>
-                      {/* (Opcional) Favoritos para admin */}
-                      {/* <Link to="/user-game-favorites">
-                        <button className="btn btn-outline-primary m-1">
-                          <i className="fas fa-heart"></i> Favoritos
-                        </button>
-                      </Link> */}
-                    </>
-                  )}
-
-                  {/* Perfil visible para cualquier autenticado */}
-                  <Link to="/profile">
-                    <button className="btn btn-outline-dark m-1">
-                      <i className="fas fa-user-circle"></i> Profile
-                    </button>
+            {/* --- Autenticado (user/admin): TODO lo que ya tenías --- */}
+            {isAuthenticated && !inOnboarding && (
+              <>
+                {/* Botón Base de Datos SOLO si hay sesión */}
+                <li className="nav-item">
+                  <Link className="nav-link" to="/local-games">
+                    <i className="fas fa-database"></i> Todos los juegos
                   </Link>
+                </li>
 
-                  {/* Logout */}
-                  <button className="btn btn-outline-danger m-1" onClick={handleLogout}>
-                    <i className="fas fa-sign-out-alt"></i> Logout
-                  </button>
-                </>
-              )}
-            </>
-          )}
+                {/* USER */}
+                {isUser && (
+                  <>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/recommendations">
+                        <i className="fas fa-star"></i> Recomendaciones
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/user-game-favorites">
+                        <i className="fas fa-heart"></i> Mis Favoritos
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/user-platform-preferences">
+                        <i className="fas fa-desktop"></i> Mis Plataformas
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/user-genre-preferences">
+                        <i className="fas fa-tags"></i> Mis Géneros
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/users/non-favorites">
+                        <i className="fas fa-times-circle"></i> No Favoritos
+                      </Link>
+                    </li>
+                  </>
+                )}
+
+                {/* ADMIN */}
+                {isAdmin && (
+                  <>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/games">
+                        <i className="fas fa-gamepad"></i> Games
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/genres">
+                        <i className="fas fa-tags"></i> Genres
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/platforms">
+                        <i className="fas fa-desktop"></i> Platforms
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/users">
+                        <i className="fas fa-users"></i> Users
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/admins">
+                        <i className="fas fa-user-shield"></i> Admins
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/game-platforms">
+                        <i className="fas fa-link"></i> Game-Platform
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link className="nav-link" to="/game-genres">
+                        <i className="fas fa-link"></i> Game-Genres
+                      </Link>
+                    </li>
+                  </>
+                )}
+              </>
+            )}
+          </ul>
+
+          {/* RIGHT SIDE (auth actions) */}
+          <div className="d-flex align-items-center">
+            {/* Onboarding: solo aviso + logout */}
+            {isAuthenticated && inOnboarding && (
+              <>
+                <span className="text-muted me-2">
+                  <i className="fas fa-user-clock"></i>{" "}
+                  Completando configuración inicial...
+                </span>
+                <button className="btn btn-outline-danger" onClick={handleLogout}>
+                  <i className="fas fa-sign-out-alt"></i> Logout
+                </button>
+              </>
+            )}
+
+            {/* No autenticado: Login + Register */}
+            {!isAuthenticated && (
+              <div className="d-flex gap-2">
+                <Link to="/login" className="btn btn-outline-success">
+                  <i className="fas fa-sign-in-alt"></i> Login
+                </Link>
+                <Link to="/onboarding" className="btn btn-primary">
+                  Registrarse
+                </Link>
+              </div>
+            )}
+
+            {/* Autenticado (no onboarding): saludo + profile + logout */}
+            {isAuthenticated && !inOnboarding && (
+              <>
+                <span className="text-muted me-2 d-none d-lg-inline">
+                  <i className="fas fa-user"></i>{" "}
+                  Hola, {user?.name || user?.nickname || "Usuario"}
+                </span>
+                <Link to="/profile" className="btn btn-outline-dark me-2">
+                  <i className="fas fa-user-circle"></i> Profile
+                </Link>
+                <button className="btn btn-outline-danger" onClick={handleLogout}>
+                  <i className="fas fa-sign-out-alt"></i> Logout
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </nav>
   );
 };
+
 
 
 
