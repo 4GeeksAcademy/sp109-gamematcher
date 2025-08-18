@@ -1,0 +1,117 @@
+/* --- Vista Auth (login/signup) --- */
+.auth-wrapper {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+/* Figuras */
+.hex {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  background: #6e00ff;
+  opacity: .18;
+  clip-path: polygon(25% 6.7%, 75% 6.7%, 100% 50%, 75% 93.3%, 25% 93.3%, 0% 50%);
+  filter: blur(.3px);
+}
+
+/* posición de las figuras*/
+.hex.hex--1 { top: 6%;  left: 3%;  background: #00c2ff;  transform: rotate(8deg); }
+.hex.hex--2 { top: 10%; right: 28%; background: #6e00ff; transform: rotate(15deg); }
+.hex.hex--3 { top: 28%; right: 6%;  background: #ffb400; transform: rotate(-10deg); }
+.hex.hex--4 { bottom: 16%; left: 5%;  background: #23c58f; transform: rotate(4deg); }
+.hex.hex--5 { bottom: 8%;  right: 18%; background: #ff5722; transform: rotate(-6deg); }
+.hex.hex--6 { bottom: 30%; left: 16%; background: #4b1ab2; transform: rotate(12deg); }
+
+/* quote */
+.auth-hero {
+  padding: 3rem 2rem;
+  color: #1f2937;
+}
+.auth-quote {
+  max-width: 560px;
+  font-size: clamp(1.35rem, 2vw + .6rem, 2.2rem);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: .2px;
+}
+.auth-quote small {
+  display: block;
+  margin-top: 1rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Tarjeta del Login */
+.auth-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, .06);
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(2, 8, 20, .06);
+}
+.auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 600;
+  font-size: .9rem;
+}
+
+/* Inputs icons*/
+.input-icon {
+  position: relative;
+}
+.input-icon .icon {
+  position: absolute;
+  left: .85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: .5;
+}
+.input-icon .form-control {
+  padding-left: 2.25rem;
+}
+
+/* Responsive: en pantallas pequeñas esconde figuras y el texto */
+@media (max-width: 992px) {
+  .auth-hero { display: none; }
+  .hex { display: none; }
+}
+
+/* Botón Login-Singup */
+.btn-auth {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .4rem;
+  font-size: 0.9rem;
+  padding: .55rem 1.25rem;
+  border-radius: 999px;
+  width: auto;
+  min-width: 120px;
+  background-color: #6E00FF;
+  border-color: #6E00FF;
+  color: #fff;
+}
+.btn-auth:hover {
+  background-color: #5a00d1;
+  border-color: #5a00d1;
+}
+
+/* Link "Crear cuenta / Inicia sesión" */
+.link-auth {
+  color: #6E00FF !important;
+  font-weight: 600;
+  text-decoration: none;
+}
+.link-auth:hover {
+  text-decoration: underline;
+}
