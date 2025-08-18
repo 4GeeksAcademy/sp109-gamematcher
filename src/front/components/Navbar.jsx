@@ -142,6 +142,13 @@ export const Navbar = () => {
                   )}
 
                   {/* Perfil visible para cualquier autenticado */}
+
+                  <Link to="/dashboard">
+                    <button className="btn btn-outline-primary m-1">
+                      <i className="fas fa-th-large"></i> Dashboard
+                    </button>
+                  </Link>
+
                   <Link to="/profile">
                     <button className="btn btn-outline-dark m-1">
                       <i className="fas fa-user-circle"></i> Profile
