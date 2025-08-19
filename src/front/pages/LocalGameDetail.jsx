@@ -94,7 +94,7 @@ export const LocalGameDetail = () => {
         <div className="alert alert-danger" role="alert">
           <h4>Error</h4>
           <p>{error}</p>
-          <button className="btn btn-primary" onClick={() => navigate('/local-games')}>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard/local-games')}>
             Volver a la lista
           </button>
         </div>
@@ -108,7 +108,7 @@ export const LocalGameDetail = () => {
         <div className="alert alert-warning">
           <h5>Juego no encontrado</h5>
           <p>El juego solicitado no existe en nuestra base de datos.</p>
-          <button className="btn btn-primary" onClick={() => navigate('/local-games')}>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard/local-games')}>
             Volver a la lista
           </button>
         </div>
@@ -122,7 +122,7 @@ export const LocalGameDetail = () => {
         <div className="col-12">
           <button
             className="btn btn-outline-secondary mb-3"
-            onClick={() => navigate('/local-games')}
+            onClick={() => navigate('/dashboard/local-games')}
           >
             ← Volver
           </button>

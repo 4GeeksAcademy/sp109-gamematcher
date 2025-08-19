@@ -182,7 +182,7 @@ export const RawgGameList = () => {
               <div key={game.id} className="col-sm-6 col-md-4 col-lg-4">
                 <div className="card h-100 shadow-sm hover-shadow">
                   <Link
-                    to={game.rawg_id ? `/game/${game.rawg_id}` : `/games/${game.id}`}
+                    to={game.rawg_id ? `/dashboard/recommendations/${game.rawg_id}` : `/dashboard/local-games/${game.id}`}
                     className="text-decoration-none"
                   >
                     <div

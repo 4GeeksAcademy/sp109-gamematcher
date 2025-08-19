@@ -60,30 +60,19 @@ export const router = createBrowserRouter(
 
       {/* Dashboard layout con rutas anidadas */}
       <Route path="/dashboard" element={<ProtectedRoute element={UserDashboard} roles={["user", "admin"]} />}>
-  <Route path="profile" element={<ProtectedRoute element={Profile} roles={["user", "admin"]} />} />
-  <Route path="user-platform-preferences" element={<ProtectedRoute element={UserPlatformPreferenceList} roles={["user", "admin"]} />} />
+        <Route index element={<ProtectedRoute element={GameRecommendations} roles={["user"]} />} />
+        <Route path="profile" element={<ProtectedRoute element={Profile} roles={["user", "admin"]} />} />
+        <Route path="user-platform-preferences" element={<ProtectedRoute element={UserPlatformPreferenceList} roles={["user", "admin"]} />} />
         <Route path="user-genre-preferences" element={<ProtectedRoute element={UserGenrePreferenceList} roles={["user", "admin"]} />} />
         <Route path="user-game-favorites" element={<ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />} />
         <Route path="users/non-favorites" element={<ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />} />
+        <Route path="local-games" element={<LocalGamesList />} />
+        <Route path="local-games/:id" element={<LocalGameDetail />} />
         <Route path="recommendations" element={<ProtectedRoute element={GameRecommendations} roles={["user"]} />} />
+        <Route path="recommendations/:id" element={<ProtectedRoute element={RawgGameDetail} roles={["user"]} />} />
       </Route>
 
-      {/* Rutas individuales fuera del dashboard (opcional, para compatibilidad) */}
-      <Route path="/user-game-favorites" element={<ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />} />
-      <Route path="/user-platform-preferences" element={<ProtectedRoute element={UserPlatformPreferenceList} roles={["user", "admin"]} />} />
-      <Route path="/user-genre-preferences" element={<ProtectedRoute element={UserGenrePreferenceList} roles={["user", "admin"]} />} />
-      <Route path="/users/non-favorites" element={<ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />} />
-      <Route path="/profile" element={<ProtectedRoute element={Profile} roles={["user", "admin"]} />} />
-
-      {/* Rutas públicas */}
-      <Route path="/local-games" element={<LocalGamesList />} />
-      <Route path="/local-games/:id" element={<LocalGameDetail />} />
-      <Route path="/rawg-games/:id" element={<RawgGameDetail />} />
-      <Route path="/game/:id" element={<RawgGameDetail />} />
-      <Route path="/games/:id" element={<LocalGameDetail />} />
-      <Route path="/recommendations" element={
-        <ProtectedRoute element={GameRecommendations} roles={["user"]} />
-      } />
+      {/* Rutas públicas esenciales */}
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLoginForm />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
