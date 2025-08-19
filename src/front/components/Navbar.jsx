@@ -1,111 +1,79 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+// src/front/components/Navbar.jsx
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import logo from "../assets/img/GameMatcherLight.png";
+import GameMatcherLight from "../assets/img/GameMatcherLight.png"; // <-- RUTA CORRECTA
 
 export const Navbar = () => {
-  const { isAuthenticated, user, logout, onboardingCompleted } = useAuth();
-  const navigate = useNavigate();
-  const [stuck, setStuck] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setStuck(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
-  const isUser = isAuthenticated && user?.role === "user";
-  const inOnboarding = isUser && !onboardingCompleted;
+  const { isAuthenticated, logout } = useAuth();
 
   return (
-    <nav className={`navbar navbar-expand-lg navbar-light navbar-gradient shadow-sm ${stuck ? "navbar-blur" : ""}`}>
+    <nav className="navbar navbar-expand-lg navbar-gradient navbar-dark">
       <div className="container">
-        {/* Brand */}
-        <Link to="/" className="navbar-brand d-flex align-items-center gap-2 text-white">
+        {/* Izquierda: Logo */}
+        <Link to="/" className="navbar-brand d-flex align-items-center">
           <img
-            src={logo}
+            src={GameMatcherLight}
             alt="Game Matcher"
-            width="40"
-            height="40"
-            className="rounded"
+            className="me-2"
+            style={{ height: "45px" }}
             onError={(e) => { e.currentTarget.src = "/GameMatcher.png"; }}
           />
-          <span className="fw-bold">Game Matcher</span>
+          <span className="fw-bold text-white">Game Matcher</span>
         </Link>
 
-        {/* Toggler */}
+        {/* Toggler (mobile) */}
         <button
-          className="navbar-toggler navbar-toggler-white"
+          className="navbar-toggler"
           type="button"
           data-bs-toggle="collapse"
-          data-bs-target="#mainNav"
-          aria-controls="mainNav"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
           aria-expanded="false"
           aria-label="Toggle navigation"
         >
-          <span className="navbar-toggler-icon navbar-toggler-icon-white"></span>
+          <span className="navbar-toggler-icon"></span>
         </button>
 
-        {/* Collapsible */}
-        <div className="collapse navbar-collapse" id="mainNav">
-          {/* LEFT: public links only if guest */}
-          {!isAuthenticated ? (
-            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+        {/* Contenido colapsable */}
+        <div className="collapse navbar-collapse" id="navbarNav">
+          {/* Izquierda: About / Team / Contact (solo invitados) */}
+          {!isAuthenticated && (
+            <ul className="navbar-nav me-auto">
               <li className="nav-item">
-                <Link className="nav-link nav-link-ghost text-white" to="/about">About us</Link>
+                <Link to="/about" className="nav-link text-white">About</Link>
               </li>
               <li className="nav-item">
-                <Link className="nav-link nav-link-ghost text-white" to="/team">Our Team</Link>
+                <Link to="/team" className="nav-link text-white">Team</Link>
               </li>
               <li className="nav-item">
-                <Link className="nav-link nav-link-ghost text-white" to="/contact">Contact</Link>
+                <Link to="/contact" className="nav-link text-white">Contact</Link>
               </li>
             </ul>
-          ) : (
-            <div className="me-auto" />
           )}
 
-          {/* RIGHT */}
-          <div className="d-flex align-items-center gap-2">
-            {!isAuthenticated && (
-              <div className="d-flex flex-wrap gap-2">
-                <Link to="/login" className="btn btn-light btn-sm rounded-pill px-3">
-                  <i className="fas fa-sign-in-alt me-1"></i> Login
-                </Link>
-                <Link to="/onboarding" className="btn btn-outline-light btn-sm rounded-pill px-3">
-                  Sign up
-                </Link>
-              </div>
-            )}
-
-            {isAuthenticated && inOnboarding && (
-              <>
-                <span className="text-white-50 small d-none d-md-inline">
-                  <i className="fas fa-user-clock me-1"></i> Completing initial setup…
-                </span>
-                <button className="btn btn-outline-light btn-sm rounded-pill px-3" onClick={handleLogout}>
-                  <i className="fas fa-sign-out-alt me-1"></i> Logout
+          {/* Derecha: Login / Logout */}
+          <ul className="navbar-nav ms-auto">
+            <li className="nav-item">
+              {isAuthenticated ? (
+                <button
+                  className="btn btn-outline-light ms-lg-3"
+                  style={{ borderRadius: 50, padding: "0.4rem 1.4rem" }}
+                  onClick={logout}
+                >
+                  Logout
                 </button>
-              </>
-            )}
-
-            {isAuthenticated && !inOnboarding && (
-              <>
-                <Link to="/profile" className="btn btn-outline-light btn-sm rounded-pill px-3">
-                  <i className="fas fa-user-circle me-1"></i> Profile
+              ) : (
+                <Link to="/login">
+                  <button
+                    className="btn btn-outline-light ms-lg-3"
+                    style={{ borderRadius: 50, padding: "0.4rem 1.4rem" }}
+                  >
+                    Login
+                  </button>
                 </Link>
-                <button className="btn btn-light btn-sm rounded-pill px-3" onClick={handleLogout}>
-                  <i className="fas fa-sign-out-alt me-1"></i> Logout
-                </button>
-              </>
-            )}
-          </div>
+              )}
+            </li>
+          </ul>
         </div>
       </div>
     </nav>
@@ -113,6 +81,22 @@ export const Navbar = () => {
 };
 
 export default Navbar;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

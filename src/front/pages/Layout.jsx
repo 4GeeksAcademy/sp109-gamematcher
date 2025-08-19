@@ -1,31 +1,31 @@
+// src/front/pages/Layout.jsx
 import { Outlet } from "react-router-dom";
+import Navbar from "../components/Navbar";      // default import
+import Footer from "../components/Footer";      // default import
 import ScrollToTop from "../components/ScrollToTop";
-import { Navbar } from "../components/Navbar";
-import Footer from "../components/Footer";
-import { AuthProvider, useAuth } from "../context/AuthContext";
+import { AuthProvider } from "../context/AuthContext"; // 👈 Provider va aquí
 
-const LayoutWithNavbar = () => {
-  const { isAuthenticated } = useAuth();
-
+const LayoutWithProviders = () => {
   return (
-    <>
-      {/* key fuerza re-render del navbar cuando cambia auth */}
-      <Navbar key={isAuthenticated ? "auth" : "guest"} />
-      <Outlet />
+    <AuthProvider>
+      <Navbar />
+      <main className="flex-grow-1">
+        <Outlet />
+      </main>
       <Footer />
-    </>
+    </AuthProvider>
   );
 };
 
 export const Layout = () => {
   return (
-    <AuthProvider>
-      <ScrollToTop>
-        <LayoutWithNavbar />
-      </ScrollToTop>
-    </AuthProvider>
+    <ScrollToTop>
+      <LayoutWithProviders />
+    </ScrollToTop>
   );
 };
+
+
 
 
 

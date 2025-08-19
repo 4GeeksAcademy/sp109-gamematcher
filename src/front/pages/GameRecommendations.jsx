@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GameCard } from '../components/GameCard';
 import { Loading } from '../components/Loading';
 
 export const GameRecommendations = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,7 +123,7 @@ export const GameRecommendations = () => {
   };
 
   const handleGameClick = (game) => {
-    window.location.href = `/game/${game.rawg_id}`;
+    navigate(`/dashboard/recommendations/${game.rawg_id}`);
   };
 
   if (loading) {
@@ -159,7 +161,7 @@ export const GameRecommendations = () => {
               </p>
               <div className="row">
                 {games.map(game => (
-                  <div key={game.id} className="col-sm-6 col-md-4 col-lg-3 mb-4">
+                  <div key={game.id} className="col-12 col-md-4 col-lg-4 mb-4">
                     <GameCard
                       game={game}
                       onClick={() => handleGameClick(game)}

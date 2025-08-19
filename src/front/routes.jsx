@@ -35,6 +35,9 @@ import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import { Profile } from "./pages/Profile";
 
+// (Opcional) Dashboard con rutas anidadas si lo usas
+import UserDashboard from "./components/UserDashboard";
+
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<Layout />} errorElement={<h1>Not found!</h1>}>
@@ -83,42 +86,65 @@ export const router = createBrowserRouter(
         element={<ProtectedRoute element={GameGenreList} roles={["admin"]} />}
       />
 
-      {/* Rutas accesibles por user y admin */}
+      {/* Dashboard (user/admin) con rutas anidadas */}
+      <Route
+        path="/dashboard"
+        element={<ProtectedRoute element={UserDashboard} roles={["user", "admin"]} />}
+      >
+        <Route
+          index
+          element={<ProtectedRoute element={GameRecommendations} roles={["user"]} />}
+        />
+        <Route
+          path="profile"
+          element={<ProtectedRoute element={Profile} roles={["user", "admin"]} />}
+        />
+        <Route
+          path="user-platform-preferences"
+          element={<ProtectedRoute element={UserPlatformPreferenceList} roles={["user", "admin"]} />}
+        />
+        <Route
+          path="user-genre-preferences"
+          element={<ProtectedRoute element={UserGenrePreferenceList} roles={["user", "admin"]} />}
+        />
+        <Route
+          path="user-game-favorites"
+          element={<ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />}
+        />
+        <Route
+          path="users/non-favorites"
+          element={<ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />}
+        />
+
+        <Route path="local-games" element={<LocalGamesList />} />
+        <Route path="local-games/:id" element={<LocalGameDetail />} />
+
+        <Route
+          path="recommendations"
+          element={<ProtectedRoute element={GameRecommendations} roles={["user"]} />}
+        />
+        <Route
+          path="recommendations/:id"
+          element={<ProtectedRoute element={RawgGameDetail} roles={["user"]} />}
+        />
+      </Route>
+
+      {/* Rutas planas (compatibilidad) */}
       <Route
         path="/user-game-favorites"
-        element={
-          <ProtectedRoute
-            element={UserGameFavoriteManager}
-            roles={["user", "admin"]}
-          />
-        }
+        element={<ProtectedRoute element={UserGameFavoriteManager} roles={["user", "admin"]} />}
       />
       <Route
         path="/user-platform-preferences"
-        element={
-          <ProtectedRoute
-            element={UserPlatformPreferenceList}
-            roles={["user", "admin"]}
-          />
-        }
+        element={<ProtectedRoute element={UserPlatformPreferenceList} roles={["user", "admin"]} />}
       />
       <Route
         path="/user-genre-preferences"
-        element={
-          <ProtectedRoute
-            element={UserGenrePreferenceList}
-            roles={["user", "admin"]}
-          />
-        }
+        element={<ProtectedRoute element={UserGenrePreferenceList} roles={["user", "admin"]} />}
       />
       <Route
         path="/users/non-favorites"
-        element={
-          <ProtectedRoute
-            element={NonFavoriteGameList}
-            roles={["user", "admin"]}
-          />
-        }
+        element={<ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />}
       />
       <Route
         path="/profile"
@@ -136,6 +162,7 @@ export const router = createBrowserRouter(
         element={<ProtectedRoute element={GameRecommendations} roles={["user"]} />}
       />
 
+      {/* Auth / estado */}
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLoginForm />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
@@ -148,6 +175,9 @@ export const router = createBrowserRouter(
     </Route>
   )
 );
+
+
+
 
 
 

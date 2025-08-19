@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { Modal, Button } from "react-bootstrap";
@@ -8,6 +9,7 @@ const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 
 export const Profile = () => {
+  const { pathname } = useLocation();
   const { user, isAuthenticated, getToken, updateUser } = useAuth();
   const [image, setImage] = useState("");
   const [suggestedImages, setSuggestedImages] = useState([]);
@@ -23,7 +25,7 @@ export const Profile = () => {
   useEffect(() => {
     if (user?.profile_image_url) setImage(user.profile_image_url);
 
-    // Sugeridas desde RAWG (como antes)
+    // Sugeridas desde RAWG
     fetch(`https://api.rawg.io/api/platforms?key=${import.meta.env.VITE_RAWG_API_KEY}`)
       .then(res => res.json())
       .then(data => {
@@ -164,67 +166,73 @@ export const Profile = () => {
   );
 
   return (
-    <div className="container py-4">
-      <div className="card p-4">
-        <h2 className="mb-3">Mi Perfil</h2>
+    <div style={{ backgroundColor: "#ffffff", minHeight: "100vh" }}>
+      <div className="container py-4">
+        <div className="row g-4">
+          <div className="col-12">
+            <div className="card card-hero overflow-hidden">
+              <div className="card-hero__header">
+                <div className="card-hero__avatar">
+                  {avatar}
+                </div>
+              </div>
+              <div className="card-hero__body">
+                <div className="text-center mb-3">
+                  <div className="mt-3">
+                    <p className="mb-0">Edita tu imagen de Perfil</p>
+                    <strong>{user?.nickname || user?.name || "Usuario"}</strong>
+                  </div>
+                </div>
 
-        {/* Avatar + nickname */}
-        <div className="text-center mb-3">
-          {avatar}
-          <div className="mt-3">
-            <strong>{user?.nickname || user?.name || "Usuario"}</strong>
-          </div>
-        </div>
+                {feedback && (
+                  <div className="alert alert-success py-2 text-center" role="alert">
+                    {feedback}
+                  </div>
+                )}
 
-        {/* Feedback */}
-        {feedback && (
-          <div className="alert alert-success py-2 text-center" role="alert">
-            {feedback}
-          </div>
-        )}
+                <div className="text-center mb-4">
+                  <label className="btn btn-primary">
+                    {loading ? "Subiendo..." : "Subir desde tu PC"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      disabled={loading}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                </div>
 
-        {/* Subir desde PC */}
-        <div className="text-center mb-4">
-          <label className="btn btn-primary">
-            {loading ? "Subiendo..." : "Subir desde tu PC"}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              disabled={loading}
-              style={{ display: "none" }}
-            />
-          </label>
-        </div>
-
-        {/* Sugeridas RAWG */}
-        <div>
-          <h5 className="mb-2">Elige una sugerida:</h5>
-          <div className="d-flex gap-3 flex-wrap">
-            {suggestedImages.map((url, idx) => (
-              <button
-                key={idx}
-                className="p-0 border-0 bg-transparent"
-                onClick={() => handleUseSuggested(url)}
-                disabled={loading}
-                title="Usar esta imagen"
-                style={{ borderRadius: 12, overflow: "hidden" }}
-              >
-                <img
-                  src={url}
-                  alt={`suggested-${idx}`}
-                  style={{ width: 120, height: 90, objectFit: "cover", display: "block" }}
-                />
-              </button>
-            ))}
-            {suggestedImages.length === 0 && (
-              <div className="text-muted">No hay sugerencias disponibles ahora.</div>
-            )}
+                <div>
+                  <h5 className="mb-2">Elige una sugerida:</h5>
+                  <div className="d-flex gap-3 flex-wrap">
+                    {suggestedImages.map((url, idx) => (
+                      <button
+                        key={idx}
+                        className="p-0 border-0 bg-transparent"
+                        onClick={() => handleUseSuggested(url)}
+                        disabled={loading}
+                        title="Usar esta imagen"
+                        style={{ borderRadius: 12, overflow: "hidden" }}
+                      >
+                        <img
+                          src={url}
+                          alt={`suggested-${idx}`}
+                          style={{ width: 120, height: 90, objectFit: "cover", display: "block" }}
+                        />
+                      </button>
+                    ))}
+                    {suggestedImages.length === 0 && (
+                      <div className="text-muted">No hay sugerencias disponibles ahora.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Confirmación eliminar */}
       <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Eliminar imagen</Modal.Title>

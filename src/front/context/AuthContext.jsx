@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
   };
   const clearUserLS = () => localStorage.removeItem(LS_USER_KEY);
 
-  // ---- util: traer usuario fresco del backend ----
+  // ---- traer usuario fresco del backend ----
   const refreshUserFromServer = async (tokenParam) => {
     const token = tokenParam || getToken();
     if (!token) return null;
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
     return freshUser;
   };
 
-  // ---- boot: hidratar cache y validar token ----
+  // ----  hidratar cache y validar token ----
   useEffect(() => {
     const boot = async () => {
       const cachedUser = getUserLS();
@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     boot();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   // ---- Onboarding ----
@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      navigate("/");
+  navigate("/dashboard");
       return freshUser;
     } catch (err) {
       console.error("Login error:", err);
@@ -174,7 +174,7 @@ export const AuthProvider = ({ children }) => {
       const freshUser = await refreshUserFromServer(token);
       if (!freshUser) throw new Error("Error obteniendo datos del administrador");
 
-      navigate("/");
+  navigate("/dashboard");
       return freshUser;
     } catch (err) {
       console.error("Admin login error:", err);
@@ -196,7 +196,7 @@ export const AuthProvider = ({ children }) => {
     navigate("/");
   };
 
-  // ---- actualizar parcialmente el usuario (p. ej., profile_image_url) ----
+  // ---- actualizar parcialmente el usuario ----
   const updateUser = (partial) => {
     setUser((prev) => {
       const next = { ...(prev || {}), ...partial };

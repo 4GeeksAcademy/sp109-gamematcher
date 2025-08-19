@@ -155,7 +155,7 @@ export const RawgGameDetail = () => {
         <div className="alert alert-danger" role="alert">
           <h4>Error</h4>
           <p>{error}</p>
-          <button className="btn btn-secondary" onClick={() => navigate(-1)}>
+          <button className="btn btn-secondary" onClick={() => navigate("/dashboard/recommendations")}>
             Volver
           </button>
         </div>
@@ -168,7 +168,7 @@ export const RawgGameDetail = () => {
       <div className="container mt-4">
         <div className="alert alert-warning" role="alert">
           <h4>Juego no encontrado</h4>
-          <button className="btn btn-secondary" onClick={() => navigate(-1)}>
+          <button className="btn btn-secondary" onClick={() => navigate("/dashboard/recommendations") }>
             Volver
           </button>
         </div>
@@ -182,7 +182,7 @@ export const RawgGameDetail = () => {
         <div className="col-12">
           <button
             className="btn btn-outline-secondary mb-3"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/dashboard/recommendations")}
           >
             ← Volver
           </button>

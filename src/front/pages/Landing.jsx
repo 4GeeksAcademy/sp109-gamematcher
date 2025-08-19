@@ -352,7 +352,7 @@ const CategoriesTwo = () => {
             <div className="category-content">
               <h2>Platforms</h2>
               <p>PC, PlayStation, Xbox, Nintendo and more — tailor your library to what you own.</p>
-              <Link to="/onboarding" className="btn">Sign up</Link>
+              <Link to="/onboarding" className="btn">Find more!</Link>
             </div>
           </div>
 
@@ -365,7 +365,7 @@ const CategoriesTwo = () => {
             <div className="category-content">
               <h2>Genres</h2>
               <p>Action, adventure, sports, indie, RPG and more — discover new favorites.</p>
-              <Link to="/onboarding" className="btn">Sign up</Link>
+              <Link to="/onboarding" className="btn">Let's play!</Link>
             </div>
           </div>
         </div>

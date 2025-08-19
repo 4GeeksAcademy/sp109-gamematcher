@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
@@ -50,86 +49,123 @@ const Login = () => {
   if (isAuthenticated) return null;
 
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-body">
-              <div className="d-flex justify-content-center mb-3">
-                <button
-                  className={`btn btn-sm ${mode === "login" ? "btn-primary" : "btn-outline-primary"} me-2`}
-                  onClick={() => setMode("login")}
-                >
-                  Login
-                </button>
-                <button
-                  className={`btn btn-sm ${mode === "signup" ? "btn-primary" : "btn-outline-primary"}`}
-                  onClick={() => setMode("signup")}
-                >
-                  Sign up
-                </button>
+    <div className="auth-wrapper">
+      {/* decorative hexes */}
+      <span className="hex hex--1" />
+      <span className="hex hex--2" />
+      <span className="hex hex--3" />
+      <span className="hex hex--4" />
+      <span className="hex hex--5" />
+      <span className="hex hex--6" />
+
+      <div className="container py-5">
+        <div className="row justify-content-center align-items-center g-5">
+          {/* Left: quote */}
+          <div className="col-lg-6">
+            <div className="auth-hero">
+              <p className="auth-quote">
+                The bigger your goal, the sweeter the taste of victory.
+                <small>— God of War</small>
+              </p>
+            </div>
+          </div>
+
+          {/* Right: form */}
+          <div className="col-lg-5 col-xl-4">
+            <div className="auth-card p-4 p-md-5">
+              <div className="mb-3 text-center">
+                <span className="auth-brand">
+                  <i className="fa-solid fa-gamepad"></i> GameMatcher
+                </span>
               </div>
 
               <h3 className="text-center mb-4">
-                {mode === "login" ? "Login" : "Create account"}
+                {mode === "login" ? "Sign in" : "Create account"}
               </h3>
 
               <form onSubmit={mode === "login" ? handleLogin : handleSignup}>
-                <div className="form-group mb-3">
-                  <label htmlFor="nickname">Nickname</label>
+                <div className="mb-3 input-icon">
+                  <span className="icon">
+                    <i className="fa-regular fa-user"></i>
+                  </span>
                   <input
                     type="text"
-                    id="nickname"
                     className="form-control"
+                    placeholder="your_nickname"
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     required
-                    placeholder="your_nickname"
                   />
                 </div>
+
                 {mode === "signup" && (
-                  <div className="form-group mb-3">
-                    <label htmlFor="email">Email</label>
+                  <div className="mb-3 input-icon">
+                    <span className="icon">
+                      <i className="fa-regular fa-envelope"></i>
+                    </span>
                     <input
                       type="email"
-                      id="email"
                       className="form-control"
+                      placeholder="you@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      placeholder="you@email.com"
                     />
                   </div>
                 )}
-                <div className="form-group mb-3">
-                  <label htmlFor="password">Password</label>
+
+                <div className="mb-3 input-icon">
+                  <span className="icon">
+                    <i className="fa-solid fa-lock"></i>
+                  </span>
                   <input
                     type="password"
-                    id="password"
                     className="form-control"
+                    placeholder="Your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="Your password"
                   />
                 </div>
 
                 {error && <div className="alert alert-danger">{error}</div>}
                 {success && <div className="alert alert-success">{success}</div>}
 
-                <button type="submit" className="btn btn-primary w-100 mb-3" disabled={loading}>
+                {/* Gradient main button */}
+                <button
+                  type="submit"
+                  className="btn-auth btn-gradient w-100 py-2"
+                  disabled={loading}
+                >
                   {loading
-                    ? mode === "login" ? "Logging in..." : "Signing up..."
-                    : mode === "login" ? "Login" : "Sign up"}
+                    ? mode === "login" ? "Signing in..." : "Creating account..."
+                    : mode === "login" ? "Sign in" : "Sign up"}
                 </button>
-              </form>
 
-              <div className="text-center">
-                <p className="text-muted">Are you an admin?</p>
-                <Link to="/admin-login" className="btn btn-outline-secondary">
-                  Admin login
-                </Link>
-              </div>
+                {mode === "signup" ? (
+                  <div className="text-center small text-muted mt-3">
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      className="btn btn-link link-auth p-0 align-baseline"
+                      onClick={() => setMode("login")}
+                    >
+                      Sign in
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center small text-muted mt-3">
+                    Not registered?{" "}
+                    <button
+                      type="button"
+                      className="btn btn-link link-auth p-0 align-baseline"
+                      onClick={() => setMode("signup")}
+                    >
+                      Create account
+                    </button>
+                  </div>
+                )}
+              </form>
             </div>
           </div>
         </div>
