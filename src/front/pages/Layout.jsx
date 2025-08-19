@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
 import ScrollToTop from "../components/ScrollToTop";
 import { Navbar } from "../components/Navbar";
-import { Footer } from "../components/Footer";
+import Footer from "../components/Footer";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
 const LayoutWithNavbar = () => {
@@ -9,6 +9,7 @@ const LayoutWithNavbar = () => {
 
   return (
     <>
+      {/* key fuerza re-render del navbar cuando cambia auth */}
       <Navbar key={isAuthenticated ? "auth" : "guest"} />
       <Outlet />
       <Footer />
@@ -25,3 +26,6 @@ export const Layout = () => {
     </AuthProvider>
   );
 };
+
+
+

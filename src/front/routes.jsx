@@ -5,15 +5,14 @@ import {
 } from "react-router-dom";
 import { Layout } from "./pages/Layout";
 
-// Páginas públicas nuevas
-import { Landing } from "./pages/Landing";
-import { About } from "./pages/About";
-import { Contact } from "./pages/Contact";
-import { Team } from "./pages/Team";
+// Páginas públicas
+import Landing from "./pages/Landing";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Team from "./pages/Team";
 
-// (Home queda disponible si lo necesitas más adelante)
-import { Home } from "./pages/Home";
-
+// Páginas de usuario/admin
+import Home from "./pages/Home";
 import { GameManager } from "./pages/GameManager";
 import { Platforms } from "./pages/Platforms";
 import { Genres } from "./pages/Genres";
@@ -48,8 +47,11 @@ export const router = createBrowserRouter(
       <Route path="/contact" element={<Contact />} />
       <Route path="/team" element={<Team />} />
 
-      {/* (Opcional) Mantener Home accesible si lo necesitas */}
-      <Route path="/home" element={<Home />} />
+      {/* Home protegido (usuarios/admins) */}
+      <Route
+        path="/home"
+        element={<ProtectedRoute element={Home} roles={["user", "admin"]} />}
+      />
 
       {/* Rutas protegidas - solo admins */}
       <Route
@@ -81,7 +83,7 @@ export const router = createBrowserRouter(
         element={<ProtectedRoute element={GameGenreList} roles={["admin"]} />}
       />
 
-      {/* Rutas accesibles por admin y user */}
+      {/* Rutas accesibles por user y admin */}
       <Route
         path="/user-game-favorites"
         element={
@@ -133,11 +135,12 @@ export const router = createBrowserRouter(
         path="/recommendations"
         element={<ProtectedRoute element={GameRecommendations} roles={["user"]} />}
       />
+
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLoginForm />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
-      {/* Ruta de onboarding para usuarios */}
+      {/* Onboarding para usuarios loggeados */}
       <Route
         path="/onboarding"
         element={<ProtectedRoute element={Onboarding} roles={["user"]} />}
@@ -145,6 +148,9 @@ export const router = createBrowserRouter(
     </Route>
   )
 );
+
+
+
 
 
 

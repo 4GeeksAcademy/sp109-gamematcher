@@ -1,30 +1,47 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-
+import logo from "../assets/img/GameMatcherLight.png";
 
 export const Navbar = () => {
   const { isAuthenticated, user, logout, onboardingCompleted } = useAuth();
   const navigate = useNavigate();
+  const [stuck, setStuck] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setStuck(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleLogout = () => {
     logout();
-    navigate("/"); // A la landing después de logout
+    navigate("/");
   };
 
-  const isAdmin = isAuthenticated && user?.role === "admin";
   const isUser = isAuthenticated && user?.role === "user";
   const inOnboarding = isUser && !onboardingCompleted;
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+    <nav className={`navbar navbar-expand-lg navbar-light navbar-gradient shadow-sm ${stuck ? "navbar-blur" : ""}`}>
       <div className="container">
-        <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
-         
+        {/* Brand */}
+        <Link to="/" className="navbar-brand d-flex align-items-center gap-2 text-white">
+          <img
+            src={logo}
+            alt="Game Matcher"
+            width="40"
+            height="40"
+            className="rounded"
+            onError={(e) => { e.currentTarget.src = "/GameMatcher.png"; }}
+          />
           <span className="fw-bold">Game Matcher</span>
         </Link>
 
+        {/* Toggler */}
         <button
-          className="navbar-toggler"
+          className="navbar-toggler navbar-toggler-white"
           type="button"
           data-bs-toggle="collapse"
           data-bs-target="#mainNav"
@@ -32,151 +49,59 @@ export const Navbar = () => {
           aria-expanded="false"
           aria-label="Toggle navigation"
         >
-          <span className="navbar-toggler-icon"></span>
+          <span className="navbar-toggler-icon navbar-toggler-icon-white"></span>
         </button>
 
+        {/* Collapsible */}
         <div className="collapse navbar-collapse" id="mainNav">
-          {/* LEFT SIDE LINKS */}
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            {/* --- Público (no autenticado): solo enlaces informativos --- */}
+          {/* LEFT: public links only if guest */}
+          {!isAuthenticated ? (
+            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+              <li className="nav-item">
+                <Link className="nav-link nav-link-ghost text-white" to="/about">About us</Link>
+              </li>
+              <li className="nav-item">
+                <Link className="nav-link nav-link-ghost text-white" to="/team">Our Team</Link>
+              </li>
+              <li className="nav-item">
+                <Link className="nav-link nav-link-ghost text-white" to="/contact">Contact</Link>
+              </li>
+            </ul>
+          ) : (
+            <div className="me-auto" />
+          )}
+
+          {/* RIGHT */}
+          <div className="d-flex align-items-center gap-2">
             {!isAuthenticated && (
-              <>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/about">About us</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/team">Our team</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/contact">Contact</Link>
-                </li>
-              </>
-            )}
-
-            {/* --- Autenticado (user/admin): TODO lo que ya tenías --- */}
-            {isAuthenticated && !inOnboarding && (
-              <>
-                {/* Botón Base de Datos SOLO si hay sesión */}
-                <li className="nav-item">
-                  <Link className="nav-link" to="/local-games">
-                    <i className="fas fa-database"></i> Todos los juegos
-                  </Link>
-                </li>
-
-                {/* USER */}
-                {isUser && (
-                  <>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/recommendations">
-                        <i className="fas fa-star"></i> Recomendaciones
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/user-game-favorites">
-                        <i className="fas fa-heart"></i> Mis Favoritos
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/user-platform-preferences">
-                        <i className="fas fa-desktop"></i> Mis Plataformas
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/user-genre-preferences">
-                        <i className="fas fa-tags"></i> Mis Géneros
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/users/non-favorites">
-                        <i className="fas fa-times-circle"></i> No Favoritos
-                      </Link>
-                    </li>
-                  </>
-                )}
-
-                {/* ADMIN */}
-                {isAdmin && (
-                  <>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/games">
-                        <i className="fas fa-gamepad"></i> Games
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/genres">
-                        <i className="fas fa-tags"></i> Genres
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/platforms">
-                        <i className="fas fa-desktop"></i> Platforms
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/users">
-                        <i className="fas fa-users"></i> Users
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/admins">
-                        <i className="fas fa-user-shield"></i> Admins
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/game-platforms">
-                        <i className="fas fa-link"></i> Game-Platform
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/game-genres">
-                        <i className="fas fa-link"></i> Game-Genres
-                      </Link>
-                    </li>
-                  </>
-                )}
-              </>
-            )}
-          </ul>
-
-          {/* RIGHT SIDE (auth actions) */}
-          <div className="d-flex align-items-center">
-            {/* Onboarding: solo aviso + logout */}
-            {isAuthenticated && inOnboarding && (
-              <>
-                <span className="text-muted me-2">
-                  <i className="fas fa-user-clock"></i>{" "}
-                  Completando configuración inicial...
-                </span>
-                <button className="btn btn-outline-danger" onClick={handleLogout}>
-                  <i className="fas fa-sign-out-alt"></i> Logout
-                </button>
-              </>
-            )}
-
-            {/* No autenticado: Login + Register */}
-            {!isAuthenticated && (
-              <div className="d-flex gap-2">
-                <Link to="/login" className="btn btn-outline-success">
-                  <i className="fas fa-sign-in-alt"></i> Login
+              <div className="d-flex flex-wrap gap-2">
+                <Link to="/login" className="btn btn-light btn-sm rounded-pill px-3">
+                  <i className="fas fa-sign-in-alt me-1"></i> Login
                 </Link>
-                <Link to="/onboarding" className="btn btn-primary">
-                  Registrarse
+                <Link to="/onboarding" className="btn btn-outline-light btn-sm rounded-pill px-3">
+                  Sign up
                 </Link>
               </div>
             )}
 
-            {/* Autenticado (no onboarding): saludo + profile + logout */}
+            {isAuthenticated && inOnboarding && (
+              <>
+                <span className="text-white-50 small d-none d-md-inline">
+                  <i className="fas fa-user-clock me-1"></i> Completing initial setup…
+                </span>
+                <button className="btn btn-outline-light btn-sm rounded-pill px-3" onClick={handleLogout}>
+                  <i className="fas fa-sign-out-alt me-1"></i> Logout
+                </button>
+              </>
+            )}
+
             {isAuthenticated && !inOnboarding && (
               <>
-                <span className="text-muted me-2 d-none d-lg-inline">
-                  <i className="fas fa-user"></i>{" "}
-                  Hola, {user?.name || user?.nickname || "Usuario"}
-                </span>
-                <Link to="/profile" className="btn btn-outline-dark me-2">
-                  <i className="fas fa-user-circle"></i> Profile
+                <Link to="/profile" className="btn btn-outline-light btn-sm rounded-pill px-3">
+                  <i className="fas fa-user-circle me-1"></i> Profile
                 </Link>
-                <button className="btn btn-outline-danger" onClick={handleLogout}>
-                  <i className="fas fa-sign-out-alt"></i> Logout
+                <button className="btn btn-light btn-sm rounded-pill px-3" onClick={handleLogout}>
+                  <i className="fas fa-sign-out-alt me-1"></i> Logout
                 </button>
               </>
             )}
@@ -186,6 +111,15 @@ export const Navbar = () => {
     </nav>
   );
 };
+
+export default Navbar;
+
+
+
+
+
+
+
 
 
 

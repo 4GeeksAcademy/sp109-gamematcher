@@ -6,7 +6,7 @@ const Login = () => {
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState("login"); // "login" o "signup"
+  const [mode, setMode] = useState("login"); // "login" | "signup"
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ const Login = () => {
     try {
       await loginUser(nickname, password);
     } catch (err) {
-      setError(err.message || "Error de autenticación");
+      setError(err.message || "Authentication error");
     } finally {
       setLoading(false);
     }
@@ -31,23 +31,15 @@ const Login = () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
-      // 1. Registrar usuario
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname, email, password }),
       });
-
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || "Error al registrarse");
-
-      // 2. Automáticamente hacer login después del registro exitoso
+      if (!res.ok) throw new Error(data.msg || "Sign up failed");
       await loginUser(nickname, password);
-      
-      // 3. La redirección al onboarding se maneja en AuthContext
-      
     } catch (err) {
       setError(err.message);
     } finally {
@@ -55,7 +47,7 @@ const Login = () => {
     }
   };
 
-  if (isAuthenticated) return null; // Ocultar login/registro si ya está logueado
+  if (isAuthenticated) return null;
 
   return (
     <div className="container mt-5">
@@ -68,23 +60,23 @@ const Login = () => {
                   className={`btn btn-sm ${mode === "login" ? "btn-primary" : "btn-outline-primary"} me-2`}
                   onClick={() => setMode("login")}
                 >
-                  Iniciar Sesión
+                  Login
                 </button>
                 <button
                   className={`btn btn-sm ${mode === "signup" ? "btn-primary" : "btn-outline-primary"}`}
                   onClick={() => setMode("signup")}
                 >
-                  Registrarse
+                  Sign up
                 </button>
               </div>
 
               <h3 className="text-center mb-4">
-                {mode === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
+                {mode === "login" ? "Login" : "Create account"}
               </h3>
 
               <form onSubmit={mode === "login" ? handleLogin : handleSignup}>
                 <div className="form-group mb-3">
-                  <label htmlFor="nickname">Nickname:</label>
+                  <label htmlFor="nickname">Nickname</label>
                   <input
                     type="text"
                     id="nickname"
@@ -92,12 +84,12 @@ const Login = () => {
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     required
-                    placeholder="tu_nickname"
+                    placeholder="your_nickname"
                   />
                 </div>
                 {mode === "signup" && (
                   <div className="form-group mb-3">
-                    <label htmlFor="email">Email:</label>
+                    <label htmlFor="email">Email</label>
                     <input
                       type="email"
                       id="email"
@@ -105,12 +97,12 @@ const Login = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      placeholder="tu@email.com"
+                      placeholder="you@email.com"
                     />
                   </div>
                 )}
                 <div className="form-group mb-3">
-                  <label htmlFor="password">Contraseña:</label>
+                  <label htmlFor="password">Password</label>
                   <input
                     type="password"
                     id="password"
@@ -118,7 +110,7 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="Tu contraseña"
+                    placeholder="Your password"
                   />
                 </div>
 
@@ -127,19 +119,15 @@ const Login = () => {
 
                 <button type="submit" className="btn btn-primary w-100 mb-3" disabled={loading}>
                   {loading
-                    ? mode === "login"
-                      ? "Iniciando..."
-                      : "Registrando..."
-                    : mode === "login"
-                      ? "Iniciar Sesión"
-                      : "Registrarse"}
+                    ? mode === "login" ? "Logging in..." : "Signing up..."
+                    : mode === "login" ? "Login" : "Sign up"}
                 </button>
               </form>
 
               <div className="text-center">
-                <p className="text-muted">¿Eres administrador?</p>
+                <p className="text-muted">Are you an admin?</p>
                 <Link to="/admin-login" className="btn btn-outline-secondary">
-                  Login de Admin
+                  Admin login
                 </Link>
               </div>
             </div>
@@ -151,4 +139,6 @@ const Login = () => {
 };
 
 export default Login;
+
+
 
