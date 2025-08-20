@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
@@ -20,7 +19,7 @@ const Login = () => {
     try {
       await loginUser(nickname, password);
     } catch (err) {
-      setError(err.message || "Error de autenticación");
+      setError(err.message || "Authentication error");
     } finally {
       setLoading(false);
     }
@@ -38,7 +37,7 @@ const Login = () => {
         body: JSON.stringify({ nickname, email, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || "Error al registrarse");
+      if (!res.ok) throw new Error(data.msg || "Sign up failed");
       await loginUser(nickname, password);
     } catch (err) {
       setError(err.message);
@@ -51,7 +50,7 @@ const Login = () => {
 
   return (
     <div className="auth-wrapper">
-      {/* figures del fons */}
+      {/* decorative hexes */}
       <span className="hex hex--1" />
       <span className="hex hex--2" />
       <span className="hex hex--3" />
@@ -61,17 +60,17 @@ const Login = () => {
 
       <div className="container py-5">
         <div className="row justify-content-center align-items-center g-5">
-          {/* Izquierda: quote */}
+          {/* Left: quote */}
           <div className="col-lg-6">
             <div className="auth-hero">
               <p className="auth-quote">
-                Mientras más grande sea tu meta, mayor será el sabor de la victoria.
+                The bigger your goal, the sweeter the taste of victory.
                 <small>— God of War</small>
               </p>
             </div>
           </div>
 
-          {/* Derecha: formulario */}
+          {/* Right: form */}
           <div className="col-lg-5 col-xl-4">
             <div className="auth-card p-4 p-md-5">
               <div className="mb-3 text-center">
@@ -81,7 +80,7 @@ const Login = () => {
               </div>
 
               <h3 className="text-center mb-4">
-                {mode === "login" ? "Login" : "Create account"}
+                {mode === "login" ? "Sign in" : "Create account"}
               </h3>
 
               <form onSubmit={mode === "login" ? handleLogin : handleSignup}>
@@ -92,7 +91,7 @@ const Login = () => {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="tu_nickname"
+                    placeholder="your_nickname"
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     required
@@ -107,7 +106,7 @@ const Login = () => {
                     <input
                       type="email"
                       className="form-control"
-                      placeholder="tu@email.com"
+                      placeholder="you@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -122,7 +121,7 @@ const Login = () => {
                   <input
                     type="password"
                     className="form-control"
-                    placeholder="Tu contraseña"
+                    placeholder="Your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -132,45 +131,40 @@ const Login = () => {
                 {error && <div className="alert alert-danger">{error}</div>}
                 {success && <div className="alert alert-success">{success}</div>}
 
+                {/* Gradient main button */}
                 <button
                   type="submit"
-                  className="btn-auth"
+                  className="btn-auth btn-gradient w-100 py-2"
                   disabled={loading}
                 >
                   {loading
-                    ? (mode === "login" ? "Iniciando..." : "Registrando...")
-                    : (
-                      <>
-                        {mode === "login" ? "Sign in" : "Registrarse"}{" "}
-                        <i className="fa-solid fa-arrow-right ms-1"></i>
-                      </>
-                    )}
+                    ? mode === "login" ? "Signing in..." : "Creating account..."
+                    : mode === "login" ? "Sign in" : "Sign up"}
                 </button>
 
                 {mode === "signup" ? (
-                  <div className="text-center small text-muted">
+                  <div className="text-center small text-muted mt-3">
                     Already have an account?{" "}
                     <button
                       type="button"
                       className="btn btn-link link-auth p-0 align-baseline"
                       onClick={() => setMode("login")}
                     >
-                      Sign In
+                      Sign in
                     </button>
                   </div>
                 ) : (
-                  <div className="text-center small text-muted">
-                    Not registered??{" "}
+                  <div className="text-center small text-muted mt-3">
+                    Not registered?{" "}
                     <button
                       type="button"
                       className="btn btn-link link-auth p-0 align-baseline"
                       onClick={() => setMode("signup")}
                     >
-                      Create acount
+                      Create account
                     </button>
                   </div>
                 )}
-
               </form>
             </div>
           </div>
@@ -181,3 +175,6 @@ const Login = () => {
 };
 
 export default Login;
+
+
+
