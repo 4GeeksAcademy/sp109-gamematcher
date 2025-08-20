@@ -55,7 +55,8 @@ export const LocalGamesList = () => {
   };
 
   const handleGameClick = (game) => {
-    navigate(`/games/${game.id}`);
+    // Navegar al detalle anidado dentro del dashboard
+    navigate(`/dashboard/local-games/${game.id}`);
   };
 
   const [alert, setAlert] = useState(null);
@@ -167,10 +168,10 @@ export const LocalGamesList = () => {
       const gameDetail = await detailRes.json();
 
       const rawgPlatformNames = (gameDetail.platforms || []).map(p => p.platform?.name).filter(Boolean);
-      const rawgGenreNames    = (gameDetail.genres || []).map(gg => gg.name).filter(Boolean);
+      const rawgGenreNames = (gameDetail.genres || []).map(gg => gg.name).filter(Boolean);
 
       const platform_ids = await ensurePlatformsExist(rawgPlatformNames);
-      const genre_ids    = await ensureGenresExist(rawgGenreNames);
+      const genre_ids = await ensureGenresExist(rawgGenreNames);
 
       const payload = {
         name: g.name,
@@ -322,7 +323,7 @@ export const LocalGamesList = () => {
           {searchResults.length > 0 && (
             <div className="row">
               {searchResults.map((g) => (
-                <div key={g.id} className="col-sm-6 col-md-4 col-lg-3 mb-3">
+                <div key={g.id} className="col-12 col-md-4 col-lg-4 mb-3">
                   <div className="card h-100">
                     {g.background_image ? (
                       <img
@@ -497,7 +498,7 @@ export const LocalGamesList = () => {
               </p>
               <div className="row">
                 {games.map((game) => (
-                  <div key={game.id} className="col-sm-6 col-md-4 col-lg-3 mb-4">
+                  <div key={game.id} className="col-12 col-md-4 col-lg-4 mb-4">
                     <GameCard
                       game={transformGameData(game)}
                       onClick={() => handleGameClick(game)}

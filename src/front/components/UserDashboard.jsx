@@ -2,7 +2,7 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { GameRecommendations } from "../pages/GameRecommendations";
+// import { GameRecommendations } from "../pages/GameRecommendations";
 
 function UserDashboard() {
   const { pathname } = useLocation();
@@ -23,12 +23,23 @@ function UserDashboard() {
           <div className="col-12 col-lg-4 col-xl-3">
             <div className="card h-100">
               <div className="card-header py-3">
-                <span className="h6 mb-0">Menú</span>
+                <span className="h6 mb-0">Settings</span>
               </div>
               <div className="list-group list-group-flush list-group-sm">
                 <Link
+                  to="local-games"
+                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.includes("/dashboard/local-games") ? "active" : ""}`}
+                >
+                  <div>
+                    <i className="fa-solid fa-database me-2"></i>
+                    <span>Todos los juegos</span>
+                  </div>
+                  <i className="fa-solid fa-angle-right"></i>
+                </Link>
+
+                <Link
                   to="profile"
-                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.endsWith("profile") ? "active" : ""}`}
+                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.includes("/dashboard/profile") ? "active" : ""}`}
                 >
                   <div>
                     <i className="fa-solid fa-user me-2"></i>
@@ -39,7 +50,7 @@ function UserDashboard() {
 
                 <Link
                   to="user-platform-preferences"
-                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.endsWith("user-platform-preferences") ? "active" : ""}`}
+                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.includes("/dashboard/user-platform-preferences") ? "active" : ""}`}
                 >
                   <div>
                     <i className="fa-solid fa-gamepad me-2"></i>
@@ -50,7 +61,7 @@ function UserDashboard() {
 
                 <Link
                   to="user-genre-preferences"
-                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.endsWith("user-genre-preferences") ? "active" : ""}`}
+                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.includes("/dashboard/user-genre-preferences") ? "active" : ""}`}
                 >
                   <div>
                     <i className="fa-solid fa-tags me-2"></i>
@@ -61,7 +72,7 @@ function UserDashboard() {
 
                 <Link
                   to="user-game-favorites"
-                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.endsWith("user-game-favorites") ? "active" : ""}`}
+                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.includes("/dashboard/user-game-favorites") ? "active" : ""}`}
                 >
                   <div>
                     <i className="fa-solid fa-heart me-2"></i>
@@ -72,7 +83,7 @@ function UserDashboard() {
 
                 <Link
                   to="users/non-favorites"
-                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.endsWith("users/non-favorites") ? "active" : ""}`}
+                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.includes("/dashboard/users/non-favorites") ? "active" : ""}`}
                 >
                   <div>
                     <i className="fa-solid fa-ban me-2"></i>
@@ -83,7 +94,7 @@ function UserDashboard() {
 
                 <Link
                   to="recommendations"
-                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${pathname.endsWith("recommendations") ? "active" : ""}`}
+                  className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${(pathname === "/dashboard" || pathname.includes("/dashboard/recommendations")) ? "active" : ""}`}
                 >
                   <div>
                     <i className="fa-solid fa-star me-2"></i>
@@ -91,13 +102,14 @@ function UserDashboard() {
                   </div>
                   <i className="fa-solid fa-angle-right"></i>
                 </Link>
+
               </div>
             </div>
           </div>
-
+          
           <div className="col-12 col-lg-8 col-xl-9">
             <div className="card h-100 p-4">
-              {pathname === "/dashboard" ? <GameRecommendations /> : <Outlet />}
+              <Outlet />
             </div>
           </div>
         </div>
