@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import GameMatcherLight from "../assets/img/GameMatcherLight.png"; // <-- RUTA CORRECTA
 
 export const Navbar = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
 
   return (
     <nav className="navbar navbar-expand-lg navbar-gradient navbar-dark">
@@ -50,6 +50,39 @@ export const Navbar = () => {
               </li>
             </ul>
           )}
+
+          {/* Enlaces de administración (solo para admins) */}
+          {isAuthenticated && user?.role === "admin" && (
+            <ul className="navbar-nav me-auto">
+              <li className="nav-item">
+                <Link to="/games" className="nav-link text-white">Games</Link>
+              </li>
+              <li className="nav-item">
+                <Link to="/platforms" className="nav-link text-white">Platforms</Link>
+              </li>
+              <li className="nav-item">
+                <Link to="/genres" className="nav-link text-white">Genres</Link>
+              </li>
+              <li className="nav-item">
+                <Link to="/users" className="nav-link text-white">Users</Link>
+              </li>
+              <li className="nav-item">
+                <Link to="/admins" className="nav-link text-white">Admins</Link>
+              </li>
+              <li className="nav-item dropdown">
+                <a className="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Relations
+                </a>
+                <ul className="dropdown-menu">
+                  <li><Link className="dropdown-item" to="/game-platforms">Game-Platforms</Link></li>
+                  <li><Link className="dropdown-item" to="/game-genres">Game-Genres</Link></li>
+                </ul>
+              </li>
+            </ul>
+          )}
+
+          {/* Enlaces de usuario (solo para usuarios normales) */}
+          {/* Eliminado: Dashboard link redundante ya que los usuarios van directo al dashboard */}
 
           {/* Derecha: Login / Logout */}
           <ul className="navbar-nav ms-auto">

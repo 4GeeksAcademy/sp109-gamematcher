@@ -8,11 +8,13 @@ import { AuthProvider } from "../context/AuthContext"; // 👈 Provider va aquí
 const LayoutWithProviders = () => {
   return (
     <AuthProvider>
-      <Navbar />
-      <main className="flex-grow-1">
-        <Outlet />
-      </main>
-      <Footer />
+      <div className="d-flex flex-column min-vh-100">
+        <Navbar />
+        <main className="flex-grow-1">
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
     </AuthProvider>
   );
 };

@@ -151,9 +151,9 @@ const OnboardingWizard = () => {
         });
       }
 
-      // Redirigir a las recomendaciones después de completar onboarding
+      // Redirigir al dashboard después de completar onboarding
       await checkOnboardingStatus(user.id); // Actualizar estado en el AuthContext
-      navigate('/recommendations'); // Redirigir a recomendaciones
+      navigate('/dashboard'); // Redirigir al dashboard del usuario
     } catch (error) {
       console.error('Error completing onboarding:', error);
       alert('Hubo un error guardando tus preferencias. Por favor, inténtalo de nuevo.');
@@ -207,7 +207,7 @@ const OnboardingWizard = () => {
 
   if (!user) {
     return (
-      <div className="container-fluid vh-100 d-flex align-items-center justify-content-center">
+      <div className="container-fluid d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
         <div className="text-center">
           <i className="fas fa-spinner fa-spin fa-3x mb-3 text-primary"></i>
           <p>Cargando...</p>
@@ -217,8 +217,8 @@ const OnboardingWizard = () => {
   }
 
   return (
-    <div className="container-fluid vh-100" style={{ backgroundColor: '#f8f9fa' }}>
-      <div className="row h-100">
+    <div className="container-fluid" style={{ backgroundColor: '#f8f9fa', minHeight: '80vh' }}>
+      <div className="row">
         <div className="col-12">
           {/* Header con progreso */}
           <div className="bg-white shadow-sm p-4 mb-4">
