@@ -86,10 +86,10 @@ export const router = createBrowserRouter(
         element={<ProtectedRoute element={GameGenreList} roles={["admin"]} />}
       />
 
-      {/* Dashboard (user/admin) con rutas anidadas */}
+      {/* Dashboard - solo para usuarios normales */}
       <Route
         path="/dashboard"
-        element={<ProtectedRoute element={UserDashboard} roles={["user", "admin"]} />}
+        element={<ProtectedRoute element={UserDashboard} roles={["user"]} />}
       >
         <Route
           index
@@ -97,7 +97,7 @@ export const router = createBrowserRouter(
         />
         <Route
           path="profile"
-          element={<ProtectedRoute element={Profile} roles={["user", "admin"]} />}
+          element={<ProtectedRoute element={Profile} roles={["user"]} />}
         />
         <Route
           path="user-platform-preferences"
@@ -113,7 +113,7 @@ export const router = createBrowserRouter(
         />
         <Route
           path="users/non-favorites"
-          element={<ProtectedRoute element={NonFavoriteGameList} roles={["user", "admin"]} />}
+          element={<ProtectedRoute element={NonFavoriteGameList} roles={["user"]} />}
         />
 
         <Route path="local-games" element={<LocalGamesList />} />

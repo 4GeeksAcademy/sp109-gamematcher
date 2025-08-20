@@ -5,6 +5,19 @@
   --bs-body-font-family: "Roboto", system-ui, -apple-system, "Segoe UI",
                          "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 }
+
+/* Layout flexbox para sticky footer */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 body{
   font-family: var(--bs-body-font-family) !important;
   font-weight: 400;
@@ -221,10 +234,16 @@ a { text-decoration: none; }
 /* ===== Resta d’estils “develop” (seccions, cards, etc.) ===== */
 /* Footer gradient */
 .footer-gradient{
-  position:relative;
   background:linear-gradient(135deg, #6e00ff 0%, #9b00e8 100%);
   clip-path:polygon(0 10%, 100% 0, 100% 100%, 0% 100%);
   color:#fff;
+  margin-top: auto; /* Esto empuja el footer al final */
+}
+
+/* Onboarding spacing */
+.onboarding-page {
+  min-height: calc(100vh - 200px); /* Deja espacio para navbar y footer */
+  padding-bottom: 2rem;
 }
 /* Sections spacing */
 .slice{ position:relative; padding-top:4rem; padding-bottom:4rem; }

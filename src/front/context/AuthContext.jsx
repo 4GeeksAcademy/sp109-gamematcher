@@ -174,7 +174,7 @@ export const AuthProvider = ({ children }) => {
       const freshUser = await refreshUserFromServer(token);
       if (!freshUser) throw new Error("Error obteniendo datos del administrador");
 
-  navigate("/dashboard");
+      navigate("/games"); // Redirigir a gestión de juegos para administradores
       return freshUser;
     } catch (err) {
       console.error("Admin login error:", err);
