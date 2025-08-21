@@ -10,7 +10,7 @@ function UserDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
-      <div style={{ background: "#6e00ff", color: "white", padding: "40px 0", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
+      <div style={{ background: "linear-gradient(50deg, #6e00ff 0, #bb00ff 100%)", color: "white", padding: "40px 0", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
         <div className="container d-flex align-items-center justify-content-between">
           <h2 className="mb-0" style={{ fontWeight: 600 }}>
             ¡Hola, {user?.nickname || user?.name || "Usuario"}!
@@ -106,7 +106,7 @@ function UserDashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="col-12 col-lg-8 col-xl-9">
             <div className="card h-100 p-4">
               <Outlet />
