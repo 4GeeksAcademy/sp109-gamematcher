@@ -487,7 +487,7 @@ def get_admin_user(admin_id):
     return jsonify(admin.serialize()), 200
 
 
-@api.route('/admins/post', methods=['POST'])
+@api.route('/admins', methods=['POST'])
 def create_admin_user():
     data = request.get_json() or {}
     if not data.get("email") or not data.get("name"):
