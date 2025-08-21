@@ -72,7 +72,6 @@ a { text-decoration: none; }
 .auth-wrapper{
   position:relative; min-height:100vh; display:flex; align-items:center;
   background:#f8fafc; overflow:hidden;
-  /* desplaçament de TOTA la secció (card, quote i figures) */
   --auth-offset-top: 5rem;
   padding-top: var(--auth-offset-top);
 }
@@ -88,7 +87,6 @@ a { text-decoration: none; }
 .fill-red{       fill:#ff4d61; }
 
 @media (max-width:576px){ .auth-figures{ display:none; } }
-/* Pujar bloc a dalt en desktop i donar aire */
 @media (min-width:992px){
   .auth-wrapper{ align-items:flex-start; }
   .auth-wrapper .container{ padding-top:2.5rem; }
@@ -118,7 +116,6 @@ a { text-decoration: none; }
   border-radius:.3rem;
   padding-bottom:1rem !important;
 }
-/* Títol / subtítol */
 .auth-card h6.h3{
   font-weight:300; font-size:clamp(1.5rem, 1.2rem + 1vw, 2rem);
   line-height:1.3; margin-bottom:.75rem; color:#2e3a46;
@@ -128,7 +125,6 @@ a { text-decoration: none; }
   font-size:.95rem; font-weight:300; color:#8a99ab !important;
   margin-top:.55rem; margin-bottom:3.25rem;
 }
-/* Labels */
 .auth-card .form-label{
   font-size:.875rem; font-weight:400; color:#1f2937; margin-bottom:.8rem;
 }
@@ -144,12 +140,10 @@ a { text-decoration: none; }
 .input-group-merge .form-control:focus{
   border-color:#bda5ff; box-shadow:0 0 0 .2rem rgba(110,0,255,.10);
 }
-/* addons icones */
 .input-group-merge .input-group-text{
   background:transparent; color:#94a3b8;
   border-color:rgba(15,23,42,.12); padding-inline:.9rem;
 }
-/* sense separador vertical */
 .input-group-merge .input-group-text + .form-control,
 .input-group-merge .form-control + .input-group-text{ border-left:0; }
 .input-group-merge .form-control:not(:last-child){ border-right:0 !important; }
@@ -160,9 +154,7 @@ a { text-decoration: none; }
 .input-group-merge .form-control:last-child{
   border-top-right-radius:.5rem; border-bottom-right-radius:.5rem;
 }
-/* botó “eye” */
 .auth-card .input-group-merge .btn-eye{ border-left:0 !important; }
-/* placeholder suau */
 .auth-card .form-control::placeholder{ color:#a0afc0; font-weight:300; }
 
 /* “Lost password?” */
@@ -182,7 +174,7 @@ a { text-decoration: none; }
   background:#6E00FF; color:#fff; font-weight:600; line-height:1;
   box-shadow:0 10px 24px rgba(110,0,255,.28), 0 2px 6px rgba(17,24,39,.08);
   transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
-  margin-top:.25rem; margin-bottom:2rem; /* espai sota el botó */
+  margin-top:.25rem; margin-bottom:2rem;
 }
 .auth-card .btn-auth:hover{
   filter:brightness(.98);
@@ -231,27 +223,19 @@ a { text-decoration: none; }
 .text-underline--dashed:hover{ border-bottom-style:solid; }
 .text-underline--dashed.border-primary{ border-bottom-color:#6E00FF; }
 
-/* ===== Resta d’estils “develop” (seccions, cards, etc.) ===== */
-/* Footer gradient */
+/* ===== Resta d’estils (seccions, cards, etc.) ===== */
 .footer-gradient{
   background:linear-gradient(135deg, #6e00ff 0%, #9b00e8 100%);
   clip-path:polygon(0 10%, 100% 0, 100% 100%, 0% 100%);
   color:#fff;
-  margin-top: auto; /* Esto empuja el footer al final */
+  margin-top: auto;
 }
 
-/* Onboarding spacing */
-.onboarding-page {
-  min-height: calc(100vh - 200px); /* Deja espacio para navbar y footer */
-  padding-bottom: 2rem;
-}
-/* Sections spacing */
+.onboarding-page { min-height: calc(100vh - 200px); padding-bottom: 2rem; }
 .slice{ position:relative; padding-top:4rem; padding-bottom:4rem; }
 .slice-xl{ position:relative; padding-top:8rem; padding-bottom:8rem; }
 .has-floating-items{ padding-bottom:18rem !important; }
-/* Categories band (slim) */
 .categories-band{ padding-top:3.5rem!important; padding-bottom:3.5rem!important; overflow:hidden; }
-/* Bubbles animades */
 @keyframes floatY{ 0%{transform:translateY(0)}50%{transform:translateY(-14px)}100%{transform:translateY(0)} }
 .floating-bubble{ position:absolute; width:120px; height:120px; background:#fff; border-radius:50%;
   box-shadow:0 20px 40px rgba(0,0,0,.15); display:flex; align-items:center; justify-content:center;
@@ -261,7 +245,6 @@ a { text-decoration: none; }
 .floating-bubble i{ font-size:1.75rem; color:#6e00ff; opacity:.9; }
 .delay-0{animation-delay:0s}.delay-1{animation-delay:.4s}.delay-2{animation-delay:.8s}
 .delay-3{animation-delay:1.2s}.delay-4{animation-delay:1.6s}.delay-5{animation-delay:2s}
-/* Games grid */
 .game-card{ background:#fff; border:0; border-radius:1rem; overflow:hidden;
   box-shadow:0 16px 40px rgba(23,10,52,.12); transition:transform .2s ease, box-shadow .2s ease; }
 .game-card:hover{ transform:translateY(-4px); box-shadow:0 28px 70px rgba(23,10,52,.20); }
@@ -272,10 +255,8 @@ a { text-decoration: none; }
 .game-title{ color:#101224; font-weight:800; font-size:1.125rem; line-height:1.2; margin:0 0 .5rem 0; }
 .game-meta{ color:#5a5f6a; font-size:.85rem; display:flex; align-items:center; gap:.75rem; }
 .badge-chip{ background:#f3f0ff; color:#5c2be3; border-radius:999px; padding:.25rem .6rem; font-size:.75rem; }
-/* Load more */
 .load-more-btn{ background:linear-gradient(50deg,#6e00ff 0,#bb00ff 100%); color:#fff; border:none; border-radius:50px; padding:.75rem 2rem; transition:transform .2s ease, box-shadow .2s ease; }
 .load-more-btn:hover{ transform:translateY(-2px); box-shadow:0 10px 20px rgba(110,0,255,.3); }
-/* Testimonials */
 .section-soft{ background:#f6f8fb; }
 .testimonial-card{ border:0; border-radius:.75rem; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,.06); }
 .testimonial-card .avatar{ width:44px; height:44px; border-radius:50%; object-fit:cover; }
@@ -283,7 +264,6 @@ a { text-decoration: none; }
 .reviews-indicators{ display:flex; gap:10px; background:#fff; border-radius:999px; padding:6px 10px; box-shadow:0 10px 24px rgba(0,0,0,.08); }
 .reviews-indicators button{ width:10px; height:10px; border-radius:50%; background:#cfd6e4; border:0; padding:0; cursor:pointer; }
 .reviews-indicators button.active{ background:#6e00ff; }
-/* Category split 2 */
 .category-hero{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:3rem 0; }
 .category-card{ position:relative; height:380px; border-radius:1rem; overflow:hidden; color:#fff; text-align:center; display:flex; flex-direction:column; justify-content:center; padding:2rem; }
 .category-bg{ position:absolute; inset:0; background-size:cover; background-position:center; filter:blur(4px) brightness(.75) saturate(105%); z-index:0; }
@@ -297,18 +277,156 @@ a { text-decoration: none; }
   .slice-xl{ padding-top:6rem; padding-bottom:6rem; }
   .categories-band{ padding-top:3rem!important; padding-bottom:3rem!important; }
 }
-/* Team / About (develop) */
 .team-hero{ position:relative; padding:6rem 0 5rem; overflow:hidden; }
 .shape{ position:absolute; opacity:.9; filter:drop-shadow(0 10px 25px rgba(0,0,0,.15)); }
 .shape-diamond{ width:82px; height:82px; background:#2ee7e7; left:10%; top:48%; transform:rotate(45deg); border-radius:18px; }
 .shape-hex{ width:96px; height:96px; right:18%; top:22%; background:#ff98bf; clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%); }
 .card-team{ transition: transform .2s ease, box-shadow .2s ease; }
 .card-team:hover{ transform:translateY(-4px); box-shadow:0 22px 60px rgba(0,0,0,.12); }
-/* Botó gradient reutilitzable */
 .btn-gradient{ background:linear-gradient(50deg,#6e00ff 0,#bb00ff 100%); color:#fff !important; border:none !important; border-radius:999px; }
 .btn-gradient:hover{ opacity:.95; box-shadow:0 10px 22px rgba(110,0,255,.28); }
-/* About hero */
 .about-hero{ position:relative; min-height:52vh; background:linear-gradient(90deg,#6e00ff 0%,#bb00ff 100%); overflow:hidden; border-radius:8px; }
 .about-hero__content{ position:relative; z-index:2; }
 .about-hero__watermark{ position:absolute; right:5%; bottom:-8%; width:clamp(360px,38vw,620px); opacity:.18; pointer-events:none; filter:drop-shadow(0 10px 25px rgba(0,0,0,.18)); z-index:1; animation:watermarkFloat 7s ease-in-out infinite; transform-origin:center; }
 @keyframes watermarkFloat{ 0%{transform:translateY(0) scale(1);opacity:.16}50%{transform:translateY(-6px) scale(1.02);opacity:.20}100%{transform:translateY(0) scale(1);opacity:.16} }
+
+/* =========================
+   GAME DETAIL (nuevo moderno)
+   ========================= */
+.gdetail-page {}
+
+.gdetail-hero{
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 320px;
+  background-size: cover;
+  background-position: center;
+  isolation: isolate;
+}
+.gdetail-hero__overlay{
+  position:absolute; inset:0;
+  background: linear-gradient(120deg, rgba(111, 0, 255, 0.344), rgba(187, 0, 255, 0.082));
+  backdrop-filter: blur(6px);
+  z-index:0;
+}
+.gdetail-hero__inner{
+  position: relative;
+  z-index: 1;
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+}
+.gdetail-cover{
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  background: #f5f6f9;
+}
+.gdetail-title{
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.5rem, 1rem + 2.2vw, 2.5rem);
+  color: #fff;
+}
+.chip{
+  display:inline-flex; align-items:center; gap:.35rem;
+  padding:.35rem .8rem;
+  border-radius:999px;
+  background: #f3f0ff;
+  color:#5c2be3;
+  font-weight: 600;
+  font-size: .85rem;
+}
+.chip.soft{ background:#efe9ff; color:#5c2be3; }
+.chip.alt{  background:#ecebff; color:#4028d3; }
+
+.rating-chip{
+  display:inline-flex; align-items:center;
+  gap:.4rem; padding:.35rem .75rem;
+  border-radius:999px;
+  background:#f8efd5;
+  color:#f3ae19;
+  font-weight:700; font-size:.85rem;
+}
+
+.glass-card{
+  border-radius: 14px;
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(23,10,52,.10);
+  border: 1px solid rgba(110,0,255,.08);
+}
+.glass-lite{
+  background: rgba(255,255,255,.6);
+  border: 1px solid rgba(110,0,255,.08);
+  backdrop-filter: blur(4px);
+}
+
+.gdetail-meta{
+  display:flex; flex-direction:column;
+  gap:.25rem; padding:.5rem .25rem;
+}
+.gdetail-meta__label{
+  font-size:.8rem; color:#6b7280; text-transform:uppercase; letter-spacing:.06em;
+}
+.gdetail-meta__value{
+  font-weight:700; color:#1f2937;
+}
+
+.btn-pill-outline{
+  border:1.5px solid #6E00FF !important;
+  color:#6E00FF !important;
+  background:transparent !important;
+  border-radius:999px !important;
+  padding:.5rem 1.15rem;
+  transition: all .2s ease;
+  font-weight:600;
+}
+.btn-pill-outline:hover{
+  background: rgba(110,0,255,.08) !important;
+}
+
+@media (max-width: 767.98px){
+  .gdetail-cover{ height: 200px; }
+}
+
+/* =========================
+   FIX: Badge de rating en GameCard (LocalGamesList)
+   ========================= */
+/* Apunta a las tarjetas dentro de la vista de listas (.games-modern)
+   y vence bg-warning + text-dark de Bootstrap con !important */
+.games-modern .card.game-card .badge.bg-warning,
+.games-modern .card.game-card .badge.bg-warning.text-dark,
+.card.game-card .badge.bg-warning.text-dark{
+  background:#f8efd5 !important;   /* crema */
+  color:#f3ae19 !important;        /* dorado para el texto */
+  border-radius:999px !important;
+  padding:.35rem .75rem !important;
+  font-weight:700 !important;
+  display:inline-flex !important;
+  align-items:center;
+  gap:.35rem;
+  border:none !important;
+  box-shadow:0 4px 12px rgba(243,174,25,.25);
+}
+
+/* color de la estrellita dentro del badge */
+.games-modern .card.game-card .badge.bg-warning i,
+.card.game-card .badge.bg-warning i{
+  color:#f3ae19 !important;
+  margin-right:.2rem;
+  font-weight:900;
+}
+
+/* ====== Platform icons in cards ====== */
+.platform-icons i{
+  font-size: 1.05rem;
+  color: #5a5f6a;          
+  margin-right: .45rem;
+  vertical-align: middle;
+}
+.platform-icons i:last-child{ margin-right: 0; }
+
+
+
