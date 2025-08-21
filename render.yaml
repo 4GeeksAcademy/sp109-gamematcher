@@ -1,35 +1,58 @@
-# Configuración para desplegar GameMatcher en Render.com
+# Render.yaml configuration for GameMatcher project
+
 services:
+  # --- Backend Flask ---
   - type: web
+    name: gamematcher-api
+    env: python
     region: ohio
-    name: sp109-gamematcher
-    runtime: python
-    buildCommand: "./render_build.sh"
-    startCommand: "gunicorn wsgi --chdir ./src/"
     plan: free
-    numInstances: 1
+    branch: develop
+    autoDeploy: true
+    rootDir: .
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn wsgi:app --chdir src"
+    postDeployCommand: "python -m flask --app src/app.py db upgrade"
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_ENV
+        value: production
       - key: FLASK_APP
         value: src/app.py
-      - key: FLASK_DEBUG
-        value: 0
-      - key: FLASK_APP_KEY
-        value: "your-secret-key-here"
-      - key: PYTHON_VERSION
-        value: 3.10.6
       - key: DATABASE_URL
         fromDatabase:
-          name: sp109-gamematcher-db
+          name: gamematcher-db
           property: connectionString
       - key: JWT_SECRET_KEY
-        value: "your-jwt-secret-key-here"
+        sync: false
+      - key: FLASK_APP_KEY
+        sync: false
       - key: CLOUDINARY_URL
-        value: "your-cloudinary-url-here"
-      - key: VITE_RAWG_API_KEY
-        value: "your-rawg-api-key-here"
+        sync: false
+      # Opcional: restringir CORS solo al frontend de Render
+      - key: CORS_ORIGINS
+        value: https://gamematcher-web.onrender.com
 
-databases:
-  - name: sp109-gamematcher-db
+  # --- Frontend Vite ---
+  - type: static_site
+    name: gamematcher-web
     region: ohio
-    ipAllowList: []
     plan: free
+    branch: develop
+    autoDeploy: true
+    rootDir: .
+    buildCommand: "npm ci && npm run build"
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://gamematcher-api.onrender.com
+      - key: VITE_RAWG_API_KEY
+        sync: false
+
+# --- Base de datos Postgres ---
+databases:
+  - name: gamematcher-db
+    region: ohio
+    plan: free
+    ipAllowList: []
