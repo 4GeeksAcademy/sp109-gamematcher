@@ -1,35 +1,35 @@
 # Configuración para desplegar GameMatcher en Render.com
 services:
-    - type: web
-      region: ohio
-      name: fp-gamematcher
-      runtime: python
-      buildCommand: "./render_build.sh"
-      startCommand: "gunicorn wsgi --chdir ./src/"
-      plan: free
-      numInstances: 1
-      envVars:
-          - key: FLASK_APP
-            value: src/app.py
-          - key: FLASK_DEBUG
-            value: 0
-          - key: FLASK_APP_KEY
-            value: "your-secret-key-here"
-          - key: PYTHON_VERSION
-            value: 3.10.6
-          - key: DATABASE_URL
-            fromDatabase:
-                name: fp-gamematcher-db
-                property: connectionString
-          - key: JWT_SECRET_KEY
-            value: "your-jwt-secret-key-here"
-          - key: CLOUDINARY_URL
-            value: "your-cloudinary-url-here"
-          - key: VITE_RAWG_API_KEY
-            value: "your-rawg-api-key-here"
+  - type: web
+    region: ohio
+    name: sp109-gamematcher
+    runtime: python
+    buildCommand: "./render_build.sh"
+    startCommand: "gunicorn wsgi --chdir ./src/"
+    plan: free
+    numInstances: 1
+    envVars:
+      - key: FLASK_APP
+        value: src/app.py
+      - key: FLASK_DEBUG
+        value: 0
+      - key: FLASK_APP_KEY
+        value: "your-secret-key-here"
+      - key: PYTHON_VERSION
+        value: 3.10.6
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sp109-gamematcher-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        value: "your-jwt-secret-key-here"
+      - key: CLOUDINARY_URL
+        value: "your-cloudinary-url-here"
+      - key: VITE_RAWG_API_KEY
+        value: "your-rawg-api-key-here"
 
 databases:
-    - name: fp-gamematcher-db
-      region: ohio
-      ipAllowList: []
-      plan: free
+  - name: sp109-gamematcher-db
+    region: ohio
+    ipAllowList: []
+    plan: free
