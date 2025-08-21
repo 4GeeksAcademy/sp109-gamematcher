@@ -21,6 +21,7 @@ alembic = "*"
 flask-jwt-extended = "*"
 flask-cors = "*"
 cloudinary = "*"
+tomli = "*"
 
 [requires]
 python_version = "3.13"
