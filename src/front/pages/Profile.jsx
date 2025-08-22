@@ -1,3 +1,4 @@
+// src/front/pages/Profile.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -13,8 +14,9 @@ export const Profile = () => {
   // avatar + picker inline
   const [image, setImage] = useState("");
   const [showPicker, setShowPicker] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
+  const [toast, setToast] = useState("");
 
   // fuentes para elegir imagen
   const [favThumbs, setFavThumbs] = useState([]);
@@ -31,8 +33,36 @@ export const Profile = () => {
     []
   );
 
-  useEffect(() => { if (user?.profile_image_url) setImage(user.profile_image_url); }, [user?.profile_image_url]);
+  useEffect(() => {
+    setImage(user?.profile_image_url || "");
+  }, [user?.profile_image_url]);
 
+  // -------- helpers --------
+  const notify = (msg) => {
+    setToast(msg);
+    window.clearTimeout((notify)._t);
+    (notify)._t = window.setTimeout(() => setToast(""), 2400);
+  };
+
+  const getAnyToken = () => {
+    const candidates = [
+      typeof getToken === "function" ? getToken() : null,
+      localStorage.getItem("token"),
+      sessionStorage.getItem("token"),
+      localStorage.getItem("jwt"),
+      sessionStorage.getItem("jwt"),
+      localStorage.getItem("access_token"),
+      sessionStorage.getItem("access_token"),
+    ].filter(Boolean);
+
+    if (!candidates.length) return null;
+
+    let raw = String(candidates[0]).replace(/^"(.*)"$/, "$1").trim();
+    if (!raw) return null;
+    return raw.startsWith("Bearer ") ? raw : `Bearer ${raw}`;
+  };
+
+  // -------- data: favoritos + contadores --------
   useEffect(() => {
     if (!user?.id) return;
 
@@ -91,21 +121,51 @@ export const Profile = () => {
 
     fetchFavorites();
     fetchPrefsCounts();
-  }, [user?.id]);
+  }, [user?.id, API_URL]);
 
-  // Recomendados
+  // -------- data: recomendaciones con fallback --------
   useEffect(() => {
+    const fetchRawgTop = async () => {
+      try {
+        const API_KEY = import.meta.env.VITE_RAWG_API_KEY;
+        const params = new URLSearchParams({
+          key: API_KEY,
+          page_size: "12",
+          ordering: "-rating",
+        });
+        const rawg = await fetch(`https://api.rawg.io/api/games?${params}`).then((r) => r.json());
+        const list = (rawg.results || []).slice(0, 6).map((g) => ({
+          id: g.id,
+          name: g.name,
+          background_image: g.background_image,
+          rating: g.rating || 0,
+          released: g.released || "",
+          rawg_id: g.id,
+        }));
+        setRecs(list);
+      } catch {
+        setRecs([]);
+      }
+    };
+
     const fetchRecs = async () => {
       try {
-        const token = getToken?.();
-        if (!token) return;
+        const bearer = getAnyToken();
+        if (!bearer) {
+          await fetchRawgTop();
+          return;
+        }
 
         const prefsRes = await fetch(`${API_URL}/api/games/recommendations/context`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: bearer },
         });
-        if (!prefsRes.ok) return;
-        const prefs = await prefsRes.json();
 
+        if (prefsRes.status === 401 || !prefsRes.ok) {
+          await fetchRawgTop();
+          return;
+        }
+
+        const prefs = await prefsRes.json();
         const API_KEY = import.meta.env.VITE_RAWG_API_KEY;
         const params = new URLSearchParams({
           key: API_KEY,
@@ -133,14 +193,20 @@ export const Profile = () => {
             released: g.released || "",
             rawg_id: g.id,
           }));
-
         setRecs(list);
-      } catch { setRecs([]); }
+      } catch {
+        await fetchRawgTop();
+      }
     };
-    if (isAuthenticated) fetchRecs();
-  }, [isAuthenticated, getToken]);
 
-  // Fallback thumbs + fondos métricas
+    if (isAuthenticated) {
+      fetchRecs();
+    } else {
+      (async () => fetchRecs())();
+    }
+  }, [isAuthenticated, API_URL]);
+
+  // -------- fallback thumbs + fondos métricas --------
   useEffect(() => {
     const API_KEY = import.meta.env.VITE_RAWG_API_KEY;
     if (!favThumbs.length) {
@@ -152,7 +218,6 @@ export const Profile = () => {
         })
         .catch(() => setFallbackThumbs([]));
     }
-    // metric backgrounds
     fetch(`https://api.rawg.io/api/games?key=${API_KEY}&page_size=3&ordering=-rating`)
       .then((r) => r.json())
       .then((d) => {
@@ -161,45 +226,77 @@ export const Profile = () => {
       .catch(() => setMetricBgs([]));
   }, [favThumbs.length]);
 
-  // ==== avatar actions ====
+  // -------- avatar actions (con token & errores) --------
   const saveProfileImage = async (urlOrNull) => {
-    const token = getToken?.(); if (!token || !user?.id) return;
-    await axios.put(
+    const bearer = getAnyToken();
+    if (!bearer || !user?.id) {
+      notify("Session not found. Please sign in again.");
+      throw new Error("NO_TOKEN");
+    }
+    const res = await axios.put(
       `${API_URL}/api/users/${user.id}/profile-image`,
       { profile_image_url: urlOrNull },
-      { headers: { Authorization: `Bearer ${token}` } }
+      {
+        headers: {
+          Authorization: bearer,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        validateStatus: () => true,
+      }
     );
+    if (res.status === 401) {
+      notify("Your session expired. Please sign in again.");
+      throw new Error("UNAUTHORIZED");
+    }
+    if (res.status >= 400) {
+      notify("Could not update your image.");
+      throw new Error(`HTTP_${res.status}`);
+    }
     setImage(urlOrNull || "");
-    updateUser({ profile_image_url: urlOrNull });
+    updateUser({ profile_image_url: urlOrNull || null });
+    return res.data;
   };
 
   const onPickFromThumb = async (url) => {
-    try { setUploading(true); await saveProfileImage(url); setShowPicker(false); }
-    finally { setUploading(false); }
+    try {
+      setBusy(true);
+      await saveProfileImage(url);
+      notify("Profile image updated.");
+      setShowPicker(false);
+    } catch {/* mensajes arriba */} finally { setBusy(false); }
   };
 
   const onUploadLocal = async (file) => {
     if (!file) return;
     try {
-      setUploading(true);
+      setBusy(true);
       const form = new FormData();
       form.append("file", file);
       form.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-      const cloud = await axios.post(cloudinaryUploadURL, form);
+      const cloud = await axios.post(cloudinaryUploadURL, form, { validateStatus: () => true });
+      if (cloud.status >= 400) throw new Error("CLOUD_UPLOAD_FAIL");
       await saveProfileImage(cloud.data.secure_url);
+      notify("Profile image uploaded.");
       setShowPicker(false);
-    } catch {} finally {
-      setUploading(false);
+    } catch {
+      notify("Upload failed. Please try again.");
+    } finally {
+      setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
     }
   };
 
   const onRemove = async () => {
-    try { setUploading(true); await saveProfileImage(null); setShowPicker(false); }
-    finally { setUploading(false); }
+    try {
+      setBusy(true);
+      await saveProfileImage(null);
+      notify("Profile image removed.");
+      setShowPicker(false);
+    } catch {/* notificado */} finally { setBusy(false); }
   };
 
-  // ===== UI helpers =====
+  // -------- UI helpers --------
   const ScrollRow = ({ items, seeMoreHref, title }) => {
     const wrapRef = useRef(null);
     const scrollBy = (dir) => {
@@ -282,20 +379,35 @@ export const Profile = () => {
 
           {/* INLINE PICKER dentro del HERO */}
           {showPicker && (
-            <div className="hero-picker-overlay">
-              <div className="hero-picker glass-card">
+            <div className="hero-picker-overlay" style={{ zIndex: 50 }}>
+              <div
+                className="hero-picker-backdrop"
+                style={{ zIndex: 50 }}
+                onClick={() => !busy && setShowPicker(false)}
+              />
+              <div
+                className="hero-picker glass-card"
+                style={{ zIndex: 51 }}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="d-flex align-items-center justify-content-between mb-3">
                   <h5 className="mb-0">Profile image</h5>
-                  <button className="btn-close" onClick={() => setShowPicker(false)} aria-label="Close"/>
+                  <button className="btn-close" onClick={() => !busy && setShowPicker(false)} aria-label="Close"/>
                 </div>
 
                 <h6 className="mb-2">Pick from your games</h6>
                 <div className="d-flex flex-wrap gap-3 mb-3">
                   {(favThumbs.length ? favThumbs : fallbackThumbs).map((u, i) => (
-                    <button key={i} className="p-0 border-0 bg-transparent" style={{ borderRadius: 10, overflow: "hidden" }}
-                            onClick={() => onPickFromThumb(u)} disabled={uploading} title="Use this image">
+                    <button
+                      key={i}
+                      className="p-0 border-0 bg-transparent"
+                      style={{ borderRadius: 10, overflow: "hidden", cursor: busy ? "not-allowed" : "pointer" }}
+                      onClick={() => !busy && onPickFromThumb(u)}
+                      title="Use this image"
+                      disabled={busy}
+                    >
                       <img src={u} alt={`thumb-${i}`}
-                           style={{ width: 140, height: 90, objectFit: "cover", display: "block" }}/>
+                           style={{ width: 180, height: 112, objectFit: "cover", display: "block" }}/>
                     </button>
                   ))}
                   {(!favThumbs.length && !fallbackThumbs.length) && (
@@ -304,19 +416,36 @@ export const Profile = () => {
                 </div>
 
                 <div className="d-flex flex-wrap align-items-center gap-2">
-                  <input ref={fileRef} type="file" accept="image/*"
-                         onChange={(e) => onUploadLocal(e.target.files?.[0])} hidden/>
-                  <button type="button" className="btn btn-hero-outline-white" onClick={() => fileRef.current?.click()} disabled={uploading}>
-                    <i className="fa-solid fa-upload me-2"></i> Upload from your device
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => onUploadLocal(e.target.files?.[0] || null)}
+                    hidden
+                  />
+                  {/* ← Morado (texto + borde) dentro del popup */}
+                  <button
+                    type="button"
+                    className="btn btn-outline-brand"
+                    onClick={() => !busy && fileRef.current?.click()}
+                    disabled={busy}
+                  >
+                    <i className="fa-solid fa-upload me-2"></i>
+                    Upload from your device
                   </button>
                   {image && (
-                    <button type="button" className="btn btn-outline-danger" onClick={onRemove} disabled={uploading}>
-                      <i className="fa-solid fa-trash me-2"></i> Remove current image
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger"
+                      onClick={() => !busy && onRemove()}
+                      disabled={busy}
+                    >
+                      <i className="fa-solid fa-trash me-2"></i>
+                      Remove current image
                     </button>
                   )}
                 </div>
               </div>
-              <div className="hero-picker-backdrop" onClick={() => !uploading && setShowPicker(false)} />
             </div>
           )}
         </div>
@@ -353,11 +482,24 @@ export const Profile = () => {
           ))}
         </div>
       </div>
+
+      {/* toast simple */}
+      {toast && (
+        <div
+          className="position-fixed bottom-0 start-50 translate-middle-x mb-4 px-3 py-2 glass-card"
+          style={{ zIndex: 60, borderRadius: 12 }}
+        >
+          {toast}
+        </div>
+      )}
     </div>
   );
 };
 
 export default Profile;
+
+
+
 
 
 
