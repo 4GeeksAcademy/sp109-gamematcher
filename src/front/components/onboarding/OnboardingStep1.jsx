@@ -1,156 +1,213 @@
-import React, { useState, useEffect } from 'react';
+// src/front/pages/OnboardingStep1.jsx
+import React, { useState, useEffect, useMemo } from "react";
 
 const OnboardingStep1 = ({ selectedPlatforms, setSelectedPlatforms, onNext }) => {
   const [platforms, setPlatforms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [brokenImages, setBrokenImages] = useState(new Set());
 
+  const backend = useMemo(() => import.meta.env.VITE_BACKEND_URL, []);
+
   useEffect(() => {
+    const loadPlatforms = async () => {
+      try {
+        const res = await fetch(`${backend}/api/platforms`);
+        setPlatforms(await res.json());
+      } catch (e) {
+        console.error("Error loading platforms:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
     loadPlatforms();
-  }, []);
+  }, [backend]);
 
-  const loadPlatforms = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/platforms`);
-      const data = await response.json();
-      setPlatforms(data);
-    } catch (error) {
-      console.error('Error loading platforms:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePlatformToggle = (platformId) => {
-    console.log('Toggle plataforma:', platformId);
-    console.log('Plataformas actualmente seleccionadas:', selectedPlatforms);
-
-    if (selectedPlatforms.includes(platformId)) {
-      const newSelection = selectedPlatforms.filter(id => id !== platformId);
-      console.log('Eliminar plataforma, nueva seleccion:', newSelection);
-      setSelectedPlatforms(newSelection);
+  const togglePlatform = (id) => {
+    if (selectedPlatforms.includes(id)) {
+      setSelectedPlatforms(selectedPlatforms.filter((x) => x !== id));
     } else {
-      const newSelection = [...selectedPlatforms, platformId];
-      console.log('Agregar plataforma, nueva seleccion:', newSelection);
-      setSelectedPlatforms(newSelection);
+      setSelectedPlatforms([...selectedPlatforms, id]);
     }
   };
 
-  const handleNext = () => {
-    console.log('Ir al siguiente paso con las plataformas seleccionadas:', selectedPlatforms);
-    if (selectedPlatforms.length === 0) {
-      alert('Por favor selecciona al menos una plataforma');
+  const onNextClick = () => {
+    if (!selectedPlatforms.length) {
+      alert("Please select at least one platform.");
       return;
     }
     onNext();
   };
 
-  const getPlatformIcon = (platformName) => {
-    switch (platformName) {
-      case 'PC':
-        return 'fas fa-desktop';
-      case 'PlayStation 5':
-        return 'fab fa-playstation';
-      case 'PlayStation 4':
-        return 'fab fa-playstation';
-      case 'Xbox Series S/X':
-        return 'fab fa-xbox';
-      case 'Xbox One':
-        return 'fab fa-xbox';
-      case 'Nintendo Switch':
-        return 'fas fa-gamepad';
-      case 'macOS':
-        return 'fab fa-apple';
+  const getPlatformIcon = (name) => {
+    switch (name) {
+      case "PC":
+        return "fas fa-desktop";
+      case "PlayStation 5":
+      case "PlayStation 4":
+        return "fab fa-playstation";
+      case "Xbox Series S/X":
+      case "Xbox One":
+        return "fab fa-xbox";
+      case "Nintendo Switch":
+        return "fas fa-gamepad";
+      case "macOS":
+        return "fab fa-apple";
       default:
-        return 'fas fa-gamepad';
+        return "fas fa-gamepad";
     }
   };
 
   if (loading) {
     return (
       <div className="text-center py-5">
-        <i className="fas fa-spinner fa-spin fa-3x mb-3 text-primary"></i>
-        <p>Cargando plataformas...</p>
+        <div className="spinner-border text-primary" role="status" />
+        <p className="mt-2">Loading platforms…</p>
       </div>
     );
   }
 
   return (
     <div className="row justify-content-center">
-      <div className="col-lg-8">
-        <div className="card shadow-sm border-0">
-          <div className="card-body p-5">
-            {/* Título */}
-            <div className="text-center mb-4">
-              <div className="mb-3">
-                <i className="fas fa-gamepad fa-3x text-primary"></i>
-              </div>
-              <h3 className="card-title">¿En qué plataformas juegas?</h3>
-              <p className="text-muted">
-                Selecciona las plataformas que usas para jugar.
-                Esto nos ayudará a recomendarte juegos disponibles en tus dispositivos.
-              </p>
+      <div className="col-xl-9 col-lg-10">
+        <div className="glass-card p-4 p-md-5">
+          {/* Header */}
+          <div className="text-center mb-4">
+            <div
+              className="mx-auto mb-3 d-inline-flex align-items-center justify-content-center"
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "14px",
+                background:
+                  "linear-gradient(50deg, rgba(110,0,255,.12), rgba(187,0,255,.12))",
+                border: "1px solid rgba(110,0,255,.18)",
+              }}
+            >
+              <i className="fas fa-gamepad" style={{ color: "#6E00FF" }}></i>
             </div>
+            <h3 className="mb-2" style={{ fontWeight: 800, letterSpacing: "-.02em" }}>
+              Which platforms do you play on?
+            </h3>
+            <p className="text-muted mb-0">
+              Select the platforms you use to play.  
+              This will help us recommend games available for your devices.
+            </p>
+          </div>
 
-            <div className="row g-3 mb-4">
-              {platforms.map((platform) => {
-                const isSelected = selectedPlatforms.includes(platform.id);
-                console.log(`Plataforma ${platform.name} (ID: ${platform.id}) - Seleccionada: ${isSelected}`);
-                return (
-                  <div key={platform.id} className="col-md-6 col-lg-4">
+          {/* Grid */}
+          <div className="row g-3 g-md-4 mb-4">
+            {platforms.map((p) => {
+              const isSelected = selectedPlatforms.includes(p.id);
+              const showImage = p.image && !brokenImages.has(p.id);
+
+              return (
+                <div key={p.id} className="col-12 col-sm-6 col-lg-4">
+                  <button
+                    type="button"
+                    onClick={() => togglePlatform(p.id)}
+                    className="w-100 text-start p-0 bg-transparent border-0"
+                    style={{ cursor: "pointer" }}
+                    aria-pressed={isSelected}
+                  >
                     <div
-                      className={`card h-100 border-2 cursor-pointer platform-card ${isSelected
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-light'
-                        }`}
-                      onClick={() => handlePlatformToggle(platform.id)}
-                      style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
+                      className="h-100"
+                      style={{
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        border: isSelected
+                          ? "2px solid #6E00FF"
+                          : "1px solid rgba(15,23,42,.08)",
+                        boxShadow: isSelected
+                          ? "0 16px 36px rgba(110,0,255,.22)"
+                          : "0 10px 28px rgba(17,24,39,.08)",
+                        background: "#fff",
+                        transition: "all .18s ease",
+                      }}
                     >
-                      <div className="card-body text-center p-4">
-                        {platform.image && !brokenImages.has(platform.id) ? (
+                      {/* Media */}
+                      <div
+                        className="position-relative"
+                        style={{ height: 160, background: "#f5f6f9" }}
+                      >
+                        {showImage ? (
                           <img
-                            src={platform.image}
-                            alt={platform.name}
-                            className="mb-3"
-                            style={{ maxHeight: '64px', objectFit: 'contain' }}
-                            onError={() => {
-                              setBrokenImages(prev => {
-                                const next = new Set(prev);
-                                next.add(platform.id);
-                                return next;
-                              });
+                            src={p.image}
+                            alt={p.name}
+                            onError={() =>
+                              setBrokenImages((prev) => new Set(prev).add(p.id))
+                            }
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              display: "block",
                             }}
                           />
                         ) : (
-                          <i className={`${getPlatformIcon(platform.name)} fa-2x mb-3`}></i>
+                          <div className="w-100 h-100 d-flex align-items-center justify-content-center">
+                            <i className={`${getPlatformIcon(p.name)} fa-3x text-muted`} />
+                          </div>
                         )}
-                        <h6 className="card-title mb-0">{platform.name}</h6>
+
+                        {/* Check pill */}
                         {isSelected && (
-                          <i className="fas fa-check-circle mt-2"></i>
+                          <span
+                            className="position-absolute top-0 end-0 m-2"
+                            style={{
+                              background: "#6E00FF",
+                              color: "#fff",
+                              borderRadius: 999,
+                              padding: ".35rem .6rem",
+                              fontWeight: 700,
+                              fontSize: 12,
+                              boxShadow: "0 6px 18px rgba(110,0,255,.36)",
+                            }}
+                          >
+                            <i className="fa-solid fa-check me-1" />
+                            Selected
+                          </span>
                         )}
                       </div>
+
+                      {/* Body */}
+                      <div className="p-3">
+                        <div
+                          className="d-flex align-items-center justify-content-between"
+                          style={{ gap: 10 }}
+                        >
+                          <h6 className="mb-0" style={{ fontWeight: 700 }}>
+                            {p.name}
+                          </h6>
+                          <span className="chip soft">
+                            <i className="fa-solid fa-gamepad"></i> Gaming
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
 
-            <div className="text-center mb-4">
-              <small className="text-muted">
-                {selectedPlatforms.length} plataforma{selectedPlatforms.length !== 1 ? 's' : ''} seleccionada{selectedPlatforms.length !== 1 ? 's' : ''}
-              </small>
-            </div>
+          {/* Counter */}
+          <div className="text-center mb-4">
+            <small className="text-muted">
+              {selectedPlatforms.length} platform
+              {selectedPlatforms.length !== 1 ? "s" : ""} selected
+            </small>
+          </div>
 
-            <div className="d-flex justify-content-end">
-              <button
-                className="btn btn-primary btn-lg px-4"
-                onClick={handleNext}
-                disabled={selectedPlatforms.length === 0}
-              >
-                Siguiente
-                <i className="fas fa-arrow-right ms-2"></i>
-              </button>
-            </div>
+          {/* Actions */}
+          <div className="d-flex justify-content-end">
+            <button
+              className="btn btn-gradient btn-lg"
+              onClick={onNextClick}
+              disabled={!selectedPlatforms.length}
+              style={{ borderRadius: 999, paddingInline: "1.35rem" }}
+            >
+              Next <i className="fas fa-arrow-right ms-2"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -159,3 +216,6 @@ const OnboardingStep1 = ({ selectedPlatforms, setSelectedPlatforms, onNext }) =>
 };
 
 export default OnboardingStep1;
+
+
+

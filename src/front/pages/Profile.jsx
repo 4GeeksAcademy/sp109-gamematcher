@@ -1,255 +1,366 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
-import { Modal, Button } from "react-bootstrap";
 
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 
 export const Profile = () => {
-  const { pathname } = useLocation();
   const { user, isAuthenticated, getToken, updateUser } = useAuth();
+
+  // avatar + picker inline
   const [image, setImage] = useState("");
-  const [suggestedImages, setSuggestedImages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [feedback, setFeedback] = useState("");
+  const [showPicker, setShowPicker] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  // fuentes para elegir imagen
+  const [favThumbs, setFavThumbs] = useState([]);
+  const [fallbackThumbs, setFallbackThumbs] = useState([]);
+
+  // carruseles y métricas
+  const [favorites, setFavorites] = useState([]); // máx 6
+  const [recs, setRecs] = useState([]);           // máx 6
+  const [counts, setCounts] = useState({ games: 0, genres: 0, platforms: 0 });
+  const [metricBgs, setMetricBgs] = useState([]); // fondos para los 3 tiles
 
   const cloudinaryUploadURL = useMemo(
     () => `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
     []
   );
 
+  useEffect(() => { if (user?.profile_image_url) setImage(user.profile_image_url); }, [user?.profile_image_url]);
+
   useEffect(() => {
-    if (user?.profile_image_url) setImage(user.profile_image_url);
+    if (!user?.id) return;
 
-    // Sugeridas desde RAWG
-    fetch(`https://api.rawg.io/api/platforms?key=${import.meta.env.VITE_RAWG_API_KEY}`)
-      .then(res => res.json())
-      .then(data => {
-        const images = (data?.results || [])
-          .map(p => p.image_background)
-          .filter(Boolean)
-          .slice(0, 6);
-        setSuggestedImages(images);
+    const fetchFavorites = async () => {
+      try {
+        const [relRes, gamesRes] = await Promise.all([
+          fetch(`${API_URL}/api/favorites`),
+          fetch(`${API_URL}/api/games`)
+        ]);
+        const rels = await relRes.json();
+        const games = await gamesRes.json();
+
+        const mine = (rels || []).filter((r) => r.user_id === user.id);
+        const gameMap = new Map(games.map((g) => [g.id, g]));
+        const favGames = mine.map((r) => gameMap.get(r.game_id)).filter(Boolean);
+
+        setFavorites(
+          favGames
+            .map((g) => ({
+              id: g.id,
+              name: g.name,
+              background_image: g.image_url || g.background_image || "",
+              released: g.release_date || g.released || "",
+              rating: g.rating || 0,
+            }))
+            .slice(0, 6)
+        );
+
+        setCounts((c) => ({ ...c, games: mine.length }));
+        setFavThumbs(
+          favGames
+            .map((g) => g.image_url || g.background_image)
+            .filter(Boolean)
+            .slice(0, 12)
+        );
+      } catch {
+        setFavorites([]); setFavThumbs([]);
+      }
+    };
+
+    const fetchPrefsCounts = async () => {
+      try {
+        const [gp, pp] = await Promise.all([
+          fetch(`${API_URL}/api/user-genre-preferences?user_id=${user.id}`).then((r) => r.json()),
+          fetch(`${API_URL}/api/user-platform-preferences?user_id=${user.id}`).then((r) => r.json()),
+        ]);
+        setCounts((c) => ({
+          ...c,
+          genres: Array.isArray(gp) ? gp.length : 0,
+          platforms: Array.isArray(pp) ? pp.length : 0,
+        }));
+      } catch {
+        setCounts((c) => ({ ...c, genres: 0, platforms: 0 }));
+      }
+    };
+
+    fetchFavorites();
+    fetchPrefsCounts();
+  }, [user?.id]);
+
+  // Recomendados
+  useEffect(() => {
+    const fetchRecs = async () => {
+      try {
+        const token = getToken?.();
+        if (!token) return;
+
+        const prefsRes = await fetch(`${API_URL}/api/games/recommendations/context`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!prefsRes.ok) return;
+        const prefs = await prefsRes.json();
+
+        const API_KEY = import.meta.env.VITE_RAWG_API_KEY;
+        const params = new URLSearchParams({
+          key: API_KEY,
+          page_size: "12",
+          ordering: "-rating",
+        });
+
+        if (prefs.preferred_genres?.length) params.append("genres", prefs.preferred_genres.join(","));
+        if (prefs.preferred_platforms?.length) {
+          const map = { PC: "4", "PlayStation 5": "187", "PlayStation 4": "18", "Xbox Series S/X": "186", "Xbox One": "1", "Nintendo Switch": "7" };
+          const ids = prefs.preferred_platforms.map((p) => map[p]).filter(Boolean);
+          if (ids.length) params.append("platforms", ids.join(","));
+        }
+
+        const rawg = await fetch(`https://api.rawg.io/api/games?${params}`).then((r) => r.json());
+        const excluded = prefs.excluded_rawg_ids || [];
+        const list = (rawg.results || [])
+          .filter((g) => !excluded.includes(g.id))
+          .slice(0, 6)
+          .map((g) => ({
+            id: g.id,
+            name: g.name,
+            background_image: g.background_image,
+            rating: g.rating || 0,
+            released: g.released || "",
+            rawg_id: g.id,
+          }));
+
+        setRecs(list);
+      } catch { setRecs([]); }
+    };
+    if (isAuthenticated) fetchRecs();
+  }, [isAuthenticated, getToken]);
+
+  // Fallback thumbs + fondos métricas
+  useEffect(() => {
+    const API_KEY = import.meta.env.VITE_RAWG_API_KEY;
+    if (!favThumbs.length) {
+      fetch(`https://api.rawg.io/api/platforms?key=${API_KEY}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const imgs = (data?.results || []).map((p) => p.image_background).filter(Boolean).slice(0, 12);
+          setFallbackThumbs(imgs);
+        })
+        .catch(() => setFallbackThumbs([]));
+    }
+    // metric backgrounds
+    fetch(`https://api.rawg.io/api/games?key=${API_KEY}&page_size=3&ordering=-rating`)
+      .then((r) => r.json())
+      .then((d) => {
+        setMetricBgs((d.results || []).map((g) => g.background_image).filter(Boolean).slice(0, 3));
       })
-      .catch(() => setSuggestedImages([]));
-  }, [user?.profile_image_url]);
+      .catch(() => setMetricBgs([]));
+  }, [favThumbs.length]);
 
-  const notify = (msg) => {
-    setFeedback(msg);
-    setTimeout(() => setFeedback(""), 2000);
-  };
-
-  // Subir archivo local -> Cloudinary -> guardar URL en backend -> actualizar contexto y localStorage
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
-      const cloudRes = await axios.post(cloudinaryUploadURL, formData);
-      const url = cloudRes.data.secure_url;
-      await saveProfileImage(url);
-
-      notify("Imagen subida correctamente");
-    } catch (err) {
-      console.error("Error uploading to Cloudinary", err);
-      notify("No se pudo subir la imagen");
-    } finally {
-      setLoading(false);
-      // limpiar input file
-      e.target.value = "";
-    }
-  };
-
-  // Guardar URL (de Cloudinary o sugeridas) en backend y en contexto/localStorage
-  const saveProfileImage = async (url) => {
-    const token = getToken?.();
-    if (!token || !user?.id) {
-      notify("Sesión inválida");
-      return;
-    }
-
+  // ==== avatar actions ====
+  const saveProfileImage = async (urlOrNull) => {
+    const token = getToken?.(); if (!token || !user?.id) return;
     await axios.put(
       `${API_URL}/api/users/${user.id}/profile-image`,
-      { profile_image_url: url },
+      { profile_image_url: urlOrNull },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
-    setImage(url);
-    // ACTUALIZAR CONTEXTO + localStorage
-    updateUser({ profile_image_url: url });
+    setImage(urlOrNull || "");
+    updateUser({ profile_image_url: urlOrNull });
   };
 
-  const handleUseSuggested = async (url) => {
+  const onPickFromThumb = async (url) => {
+    try { setUploading(true); await saveProfileImage(url); setShowPicker(false); }
+    finally { setUploading(false); }
+  };
+
+  const onUploadLocal = async (file) => {
+    if (!file) return;
     try {
-      setLoading(true);
-      await saveProfileImage(url);
-      notify("Imagen cambiada correctamente");
-    } catch {
-      notify("No se pudo actualizar la imagen");
-    } finally {
-      setLoading(false);
+      setUploading(true);
+      const form = new FormData();
+      form.append("file", file);
+      form.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+      const cloud = await axios.post(cloudinaryUploadURL, form);
+      await saveProfileImage(cloud.data.secure_url);
+      setShowPicker(false);
+    } catch {} finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   };
 
-  const handleRemoveImage = async () => {
-    try {
-      setLoading(true);
-      await saveProfileImage(null); // backend puede guardar null
-      setImage("");
-      updateUser({ profile_image_url: null });
-      notify("Imagen eliminada");
-    } catch {
-      notify("No se pudo eliminar");
-    } finally {
-      setLoading(false);
-      setShowConfirm(false);
-    }
+  const onRemove = async () => {
+    try { setUploading(true); await saveProfileImage(null); setShowPicker(false); }
+    finally { setUploading(false); }
   };
 
-  const avatar = (
-    <div
-      className="position-relative mx-auto"
-      style={{
-        width: 180,
-        height: 180,
-        borderRadius: "50%",
-        overflow: "hidden",
-        border: "3px solid #e9ecef",
-        background: image ? "#000" : "#adb5bd", // gris para el icono
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      {image ? (
-        <>
-          <img
-            src={image}
-            alt="Profile"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-          {/* Botón eliminar en la esquina */}
-          <button
-            type="button"
-            className="btn btn-light p-1 position-absolute"
-            style={{
-              top: 6,
-              right: 6,
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              boxShadow: "0 2px 6px rgba(0,0,0,.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            onClick={() => setShowConfirm(true)}
-            title="Eliminar imagen"
-          >
-            <i className="bi bi-x-lg" />
+  // ===== UI helpers =====
+  const ScrollRow = ({ items, seeMoreHref, title }) => {
+    const wrapRef = useRef(null);
+    const scrollBy = (dir) => {
+      const el = wrapRef.current; if (!el) return;
+      const w = el.clientWidth; el.scrollBy({ left: dir * (w * 0.9), behavior: "smooth" });
+    };
+    return (
+      <div className="mb-5">
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h5 className="mb-0">{title}</h5>
+          {seeMoreHref && <Link to={seeMoreHref} className="btn btn-hero-outline-white">See more</Link>}
+        </div>
+        <div className="position-relative">
+          <button type="button" onClick={() => scrollBy(-1)} className="scroll-pill left" aria-label="prev">
+            <i className="fa-solid fa-angle-left"></i>
           </button>
-        </>
-      ) : (
-        // Icono bootstrap cuando no hay imagen
-        <i className="bi bi-person-circle" style={{ fontSize: 110, color: "white" }} />
-      )}
-    </div>
-  );
-
-  return (
-    <div style={{ backgroundColor: "#ffffff", minHeight: "100vh" }}>
-      <div className="container py-4">
-        <div className="row g-4">
-          <div className="col-12">
-            <div className="card card-hero overflow-hidden">
-              <div className="card-hero__header">
-                <div className="card-hero__avatar">
-                  {avatar}
-                </div>
-              </div>
-              <div className="card-hero__body">
-                <div className="text-center mb-3">
-                  <div className="mt-3">
-                    <p className="mb-0">Edita tu imagen de Perfil</p>
-                    <strong>{user?.nickname || user?.name || "Usuario"}</strong>
-                  </div>
-                </div>
-
-                {feedback && (
-                  <div className="alert alert-success py-2 text-center" role="alert">
-                    {feedback}
+          <div ref={wrapRef} className="hscroll-cards">
+            {items.map((g) => (
+              <div key={g.id} className="hscroll-card glass-card">
+                {g.background_image ? (
+                  <img
+                    src={g.background_image}
+                    alt={g.name}
+                    className="w-100"
+                    style={{ height: 140, objectFit: "cover", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
+                  />
+                ) : (
+                  <div className="d-flex align-items-center justify-content-center bg-light"
+                       style={{ height: 140, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+                    <i className="fa-solid fa-image text-muted"></i>
                   </div>
                 )}
-
-                <div className="text-center mb-4">
-                  <label className="btn btn-primary">
-                    {loading ? "Subiendo..." : "Subir desde tu PC"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      disabled={loading}
-                      style={{ display: "none" }}
-                    />
-                  </label>
-                </div>
-
-                <div>
-                  <h5 className="mb-2">Elige una sugerida:</h5>
-                  <div className="d-flex gap-3 flex-wrap">
-                    {suggestedImages.map((url, idx) => (
-                      <button
-                        key={idx}
-                        className="p-0 border-0 bg-transparent"
-                        onClick={() => handleUseSuggested(url)}
-                        disabled={loading}
-                        title="Usar esta imagen"
-                        style={{ borderRadius: 12, overflow: "hidden" }}
-                      >
-                        <img
-                          src={url}
-                          alt={`suggested-${idx}`}
-                          style={{ width: 120, height: 90, objectFit: "cover", display: "block" }}
-                        />
-                      </button>
-                    ))}
-                    {suggestedImages.length === 0 && (
-                      <div className="text-muted">No hay sugerencias disponibles ahora.</div>
-                    )}
+                <div className="p-3">
+                  <div className="fw-bold text-truncate" title={g.name}>{g.name}</div>
+                  <div className="d-flex align-items-center gap-2 small text-muted mt-1">
+                    {g.rating ? <span className="chip alt"><i className="fa-solid fa-star"></i>{g.rating}</span> : null}
+                    {g.released ? <span className="chip soft"><i className="fa-solid fa-calendar"></i>{String(g.released).slice(0,4)}</span> : null}
                   </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
+          <button type="button" onClick={() => scrollBy(1)} className="scroll-pill right" aria-label="next">
+            <i className="fa-solid fa-angle-right"></i>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="profile-page">
+      {/* HERO */}
+      <div className="bg-gradient-primary py-5 position-relative">
+        <div className="container position-relative">
+          <div className="d-flex justify-content-end">
+            <button
+              className="btn btn-hero-outline-white"
+              onClick={() => setShowPicker(true)}
+              style={{ backdropFilter: "blur(4px)" }}
+            >
+              Change image
+            </button>
+          </div>
+
+          <div className="d-flex flex-column align-items-center mt-3">
+            <div className="position-relative"
+                 style={{ width: 180, height: 180, borderRadius: "50%", overflow: "hidden",
+                          border: "4px solid rgba(255,255,255,.9)", boxShadow: "0 10px 30px rgba(0,0,0,.2)" }}>
+              {image ? (
+                <img src={image} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
+              ) : (
+                <div className="w-100 h-100 d-flex align-items-center justify-content-center bg-light">
+                  <i className="fa-regular fa-user" style={{ fontSize: 72, color: "#94a3b8" }}/>
+                </div>
+              )}
+            </div>
+            <h3 className="text-white mt-3 mb-0">{user?.nickname || user?.name || "User"}</h3>
+          </div>
+
+          {/* INLINE PICKER dentro del HERO */}
+          {showPicker && (
+            <div className="hero-picker-overlay">
+              <div className="hero-picker glass-card">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <h5 className="mb-0">Profile image</h5>
+                  <button className="btn-close" onClick={() => setShowPicker(false)} aria-label="Close"/>
+                </div>
+
+                <h6 className="mb-2">Pick from your games</h6>
+                <div className="d-flex flex-wrap gap-3 mb-3">
+                  {(favThumbs.length ? favThumbs : fallbackThumbs).map((u, i) => (
+                    <button key={i} className="p-0 border-0 bg-transparent" style={{ borderRadius: 10, overflow: "hidden" }}
+                            onClick={() => onPickFromThumb(u)} disabled={uploading} title="Use this image">
+                      <img src={u} alt={`thumb-${i}`}
+                           style={{ width: 140, height: 90, objectFit: "cover", display: "block" }}/>
+                    </button>
+                  ))}
+                  {(!favThumbs.length && !fallbackThumbs.length) && (
+                    <div className="text-muted">No images available right now.</div>
+                  )}
+                </div>
+
+                <div className="d-flex flex-wrap align-items-center gap-2">
+                  <input ref={fileRef} type="file" accept="image/*"
+                         onChange={(e) => onUploadLocal(e.target.files?.[0])} hidden/>
+                  <button type="button" className="btn btn-hero-outline-white" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                    <i className="fa-solid fa-upload me-2"></i> Upload from your device
+                  </button>
+                  {image && (
+                    <button type="button" className="btn btn-outline-danger" onClick={onRemove} disabled={uploading}>
+                      <i className="fa-solid fa-trash me-2"></i> Remove current image
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="hero-picker-backdrop" onClick={() => !uploading && setShowPicker(false)} />
+            </div>
+          )}
         </div>
       </div>
 
-      <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Eliminar imagen</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>¿Seguro que quieres eliminar tu imagen de perfil?</Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowConfirm(false)}>
-            Cancelar
-          </Button>
-          <Button variant="danger" onClick={handleRemoveImage} disabled={loading}>
-            Sí, eliminar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* CONTENIDO */}
+      <div className="container py-5">
+        <ScrollRow title="My Favourite Games" seeMoreHref="/dashboard/user-game-favorites" items={favorites}/>
+        <ScrollRow title="Recommendations" seeMoreHref="/dashboard/recommendations" items={recs}/>
+
+        {/* MÉTRICAS con fondos blur */}
+        <div className="row g-3 g-md-4">
+          {["games", "genres", "platforms"].map((key, idx) => (
+            <div key={key} className="col-12 col-md-4">
+              <div className="metric-card">
+                {metricBgs[idx] && (
+                  <div className="metric-bg" style={{ backgroundImage: `url(${metricBgs[idx]})` }} />
+                )}
+                <div className="metric-overlay" />
+                <div className="metric-content">
+                  <div className="metric-num">{counts[key]}</div>
+                  <div className="metric-title">{key}</div>
+                  <p className="metric-desc">
+                    {key === "games" &&
+                      "Add more games you love so we can tailor your experience."}
+                    {key === "genres" &&
+                      "Pick your favorite genres—your opinion matters to get better matches."}
+                    {key === "platforms" &&
+                      "Select platforms to recommend games that fit your setup."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
+
+export default Profile;
+
+
+
 
 
 

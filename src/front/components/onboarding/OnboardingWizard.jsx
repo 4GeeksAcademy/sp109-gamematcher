@@ -1,3 +1,4 @@
+// src/front/pages/OnboardingWizard.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +13,7 @@ const OnboardingWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Estado para almacenar las selecciones del usuario
+  // User selections
   const [selectedPlatforms, setSelectedPlatforms] = useState([]);
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedFavorites, setSelectedFavorites] = useState([]);
@@ -20,7 +21,6 @@ const OnboardingWizard = () => {
 
   const totalSteps = 4;
 
-  // Cargar el progreso del onboarding al montar el componente
   useEffect(() => {
     if (user) {
       loadOnboardingProgress();
@@ -29,18 +29,15 @@ const OnboardingWizard = () => {
 
   const loadOnboardingProgress = async () => {
     if (!user) return;
-
     try {
-      // Cargar el estado del progreso del onboarding
-      const progressResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/onboarding/status/${user.id}`);
+      const progressResponse = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/onboarding/status/${user.id}`
+      );
       const progressData = await progressResponse.json();
 
       if (progressData.current_step) {
         setCurrentStep(progressData.current_step);
       }
-
-      // NO cargamos preferencias existentes en el onboarding
-      // El onboarding siempre debe empezar con estado limpio
     } catch (error) {
       console.error('Error loading onboarding progress:', error);
     }
@@ -52,13 +49,11 @@ const OnboardingWizard = () => {
     try {
       await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/onboarding/update-step`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user.id,
-          current_step: newStep
-        })
+          current_step: newStep,
+        }),
       });
 
       setCurrentStep(newStep);
@@ -84,79 +79,54 @@ const OnboardingWizard = () => {
 
     setLoading(true);
     try {
-      // Marcar onboarding como completado PRIMERO para evitar re-ejecuciones
+      // Mark onboarding as completed first
       await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/onboarding/complete`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: user.id
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id }),
       });
 
-      // 1. Guardar preferencias de plataformas
+      // Save platform preferences
       for (const platformId of selectedPlatforms) {
         await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user-platform-preferences`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user_id: user.id,
-            platform_id: platformId
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id, platform_id: platformId }),
         });
       }
 
-      // 2. Guardar preferencias de géneros
+      // Save genre preferences
       for (const genreId of selectedGenres) {
         await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user-genre-preferences`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user_id: user.id,
-            genre_id: genreId
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id, genre_id: genreId }),
         });
       }
 
-      // 3. Guardar juegos favoritos
+      // Save favorites
       for (const gameId of selectedFavorites) {
         await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/favorites`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user_id: user.id,
-            game_id: gameId
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id, game_id: gameId }),
         });
       }
 
-      // 4. Guardar juegos no favoritos
+      // Save non-favorites
       for (const gameId of selectedNonFavorites) {
         await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/non-favorites`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user_id: user.id,
-            game_id: gameId
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id, game_id: gameId }),
         });
       }
 
-      // Redirigir al dashboard después de completar onboarding
-      await checkOnboardingStatus(user.id); // Actualizar estado en el AuthContext
-      navigate('/dashboard'); // Redirigir al dashboard del usuario
+      await checkOnboardingStatus(user.id);
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error completing onboarding:', error);
-      alert('Hubo un error guardando tus preferencias. Por favor, inténtalo de nuevo.');
+      alert('There was an error saving your preferences. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -207,36 +177,48 @@ const OnboardingWizard = () => {
 
   if (!user) {
     return (
-      <div className="container-fluid d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+      <div
+        className="container-fluid d-flex align-items-center justify-content-center"
+        style={{ minHeight: '60vh' }}
+      >
         <div className="text-center">
           <i className="fas fa-spinner fa-spin fa-3x mb-3 text-primary"></i>
-          <p>Cargando...</p>
+          <p>Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container-fluid" style={{ backgroundColor: '#f8f9fa', minHeight: '80vh' }}>
+    <div
+      className="container-fluid"
+      style={{ backgroundColor: '#f8f9fa', minHeight: '80vh' }}
+    >
       <div className="row">
         <div className="col-12">
-          {/* Header con progreso */}
+          {/* Header with progress */}
           <div className="bg-white shadow-sm p-4 mb-4">
             <div className="container">
               <div className="row align-items-center">
                 <div className="col-md-6">
-                  <h2 className="mb-0 text-primary">
+                  <h2 className="mb-0" style={{ color: '#6E00FF', fontWeight: 700 }}>
                     <i className="fas fa-rocket me-2"></i>
-                    Personaliza tu experiencia
+                    Customize your experience
                   </h2>
-                  <p className="text-muted mb-0">Paso {currentStep} de {totalSteps}</p>
+                  <p className="text-muted mb-0">
+                    Step {currentStep} of {totalSteps}
+                  </p>
                 </div>
                 <div className="col-md-6">
-                  {/* Barra de progreso */}
+                  {/* Progress bar with gradient */}
                   <div className="progress" style={{ height: '8px' }}>
                     <div
-                      className="progress-bar bg-primary"
-                      style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                      className="progress-bar"
+                      style={{
+                        width: `${(currentStep / totalSteps) * 100}%`,
+                        background:
+                          'linear-gradient(90deg, #6E00FF 0%, #BB00FF 100%)',
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -244,10 +226,8 @@ const OnboardingWizard = () => {
             </div>
           </div>
 
-          {/* Contenido del step actual */}
-          <div className="container">
-            {renderCurrentStep()}
-          </div>
+          {/* Current step content */}
+          <div className="container">{renderCurrentStep()}</div>
         </div>
       </div>
     </div>
@@ -255,3 +235,4 @@ const OnboardingWizard = () => {
 };
 
 export default OnboardingWizard;
+

@@ -22,7 +22,7 @@ def upgrade():
         batch_op.add_column(sa.Column('role', sa.String(length=50), nullable=True))
         batch_op.add_column(sa.Column('is_active', sa.Boolean(), nullable=True))
         batch_op.add_column(sa.Column('profile_image_url', sa.String(length=500), nullable=True))
-        batch_op.create_unique_constraint(None, ['nickname'])
+        batch_op.create_unique_constraint('uq_user_nickname', ['nickname'])
 
     # ### end Alembic commands ###
 
