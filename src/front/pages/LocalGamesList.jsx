@@ -1,3 +1,4 @@
+// src/front/pages/LocalGamesList.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GameCard } from '../components/GameCard';
@@ -26,13 +27,8 @@ export const LocalGamesList = () => {
     try {
       setLoading(true);
       setError(null);
-      // Obtener solo juegos de la base de datos local
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/games`);
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: No se pudieron obtener los juegos`);
-      }
-
+      if (!response.ok) throw new Error(`Error ${response.status}: Could not fetch games`);
       const localGames = await response.json();
       setGames(localGames);
     } catch (err) {
@@ -42,20 +38,44 @@ export const LocalGamesList = () => {
     }
   };
 
-  const transformGameData = (game) => {
-    const transformedGame = {
-      ...game,
-      background_image: game.image_url || game.background_image || null,
-      released: game.release_date ? new Date(game.release_date).getFullYear().toString() : game.released || null,
-      genres: game.genres || [],
-      rating: game.rating || 0
-    };
+  // --- NUEVO: normalizador de nombres de plataformas para las tarjetas ---
+  const normalizePlatformNames = (game) => {
+    const candidates =
+      [
+        game.platforms,         // ["PC", "PS5"] o [{ name }, { platform: { name } }]
+        game.platform_names,
+        game.platforms_names,
+        game.platforms_list,
+        game.platforms_rel,     // [{ platform_name: "PC" }, ...]
+        game.platformsRelation, // [{ platform_name: "PC" }, ...]
+      ].find(Boolean) || [];
 
-    return transformedGame;
+    const names = (Array.isArray(candidates) ? candidates : [])
+      .map(p => {
+        if (typeof p === 'string') return p;
+        if (p?.name) return p.name;
+        if (p?.platform?.name) return p.platform.name;
+        if (p?.platform_name) return p.platform_name;
+        return null;
+      })
+      .filter(Boolean);
+
+    return [...new Set(names)];
   };
 
+  const transformGameData = (game) => ({
+    ...game,
+    background_image: game.image_url || game.background_image || null,
+    released: game.release_date
+      ? new Date(game.release_date).getFullYear().toString()
+      : game.released || null,
+    genres: game.genres || [],
+    rating: game.rating || 0,
+    // NUEVO: pasamos plataformas normalizadas si existen
+    platforms: normalizePlatformNames(game),
+  });
+
   const handleGameClick = (game) => {
-    // Navegar al detalle anidado dentro del dashboard
     navigate(`/dashboard/local-games/${game.id}`);
   };
 
@@ -87,12 +107,13 @@ export const LocalGamesList = () => {
       setAllPlatforms(await platRes.json());
       setAllGenres(await genRes.json());
     } catch (err) {
-      console.error("Error cargando plataformas/géneros:", err);
+      console.error("Error loading platforms/genres:", err);
     }
   };
 
   useEffect(() => {
     if (!(isAuthenticated && user?.role === "user")) return;
+
     const fetchRawg = async () => {
       if (searchTerm.length < 3) {
         setSearchResults([]);
@@ -100,20 +121,23 @@ export const LocalGamesList = () => {
       }
       setLoadingSearch(true);
       try {
-        const res = await fetch(`https://api.rawg.io/api/games?search=${encodeURIComponent(searchTerm)}&key=${rawgApiKey}`);
+        const res = await fetch(
+          `https://api.rawg.io/api/games?search=${encodeURIComponent(searchTerm)}&key=${rawgApiKey}`
+        );
         const data = await res.json();
         setSearchResults(data.results || []);
       } catch (e) {
-        console.error("Error RAWG:", e);
+        console.error("RAWG error:", e);
       } finally {
         setLoadingSearch(false);
       }
     };
+
     const t = setTimeout(fetchRawg, 500);
     return () => clearTimeout(t);
   }, [searchTerm, isAuthenticated, user?.role, rawgApiKey]);
 
-  // helpers (copiado de GameManager)
+  // ---- helpers ----
   const ensurePlatformsExist = async (names) => {
     const norm = (s) => String(s || "").toLowerCase().trim();
     const mapNow = new Map(allPlatforms.map(p => [norm(p.name), p.id]));
@@ -126,7 +150,7 @@ export const LocalGamesList = () => {
           body: JSON.stringify({ name })
         });
       } catch (e) {
-        console.warn("No s'ha pogut crear la plataforma:", name, e);
+        console.warn("Platform could not be created:", name, e);
       }
     }
     const res = await fetch(`${backendUrl}/api/platforms`);
@@ -148,7 +172,7 @@ export const LocalGamesList = () => {
           body: JSON.stringify({ name })
         });
       } catch (e) {
-        console.warn("No s'ha pogut crear el gènere:", name, e);
+        console.warn("Genre could not be created:", name, e);
       }
     }
     const res = await fetch(`${backendUrl}/api/genres`);
@@ -160,14 +184,16 @@ export const LocalGamesList = () => {
 
   const handleAddFromRawg = async (g) => {
     if (!g?.id || !g?.name) {
-      setAlert({ type: "danger", message: "❌ Datos del juego incompletos." });
+      setAlert({ type: "danger", message: "❌ Incomplete game data." });
       return;
     }
     try {
       const detailRes = await fetch(`https://api.rawg.io/api/games/${g.id}?key=${rawgApiKey}`);
       const gameDetail = await detailRes.json();
 
-      const rawgPlatformNames = (gameDetail.platforms || []).map(p => p.platform?.name).filter(Boolean);
+      const rawgPlatformNames = (gameDetail.platforms || [])
+        .map(p => p.platform?.name)
+        .filter(Boolean);
       const rawgGenreNames = (gameDetail.genres || []).map(gg => gg.name).filter(Boolean);
 
       const platform_ids = await ensurePlatformsExist(rawgPlatformNames);
@@ -175,7 +201,7 @@ export const LocalGamesList = () => {
 
       const payload = {
         name: g.name,
-        description: gameDetail.description_raw || "Sin descripción disponible",
+        description: gameDetail.description_raw || "No description available",
         background_image: g.background_image,
         released: g.released,
         rating: g.rating,
@@ -191,14 +217,14 @@ export const LocalGamesList = () => {
       });
 
       if (res.ok) {
-        setAlert({ type: "success", message: "✅ Juego añadido correctamente." });
+        setAlert({ type: "success", message: "✅ Game added." });
         fetchLocalGames();
       } else {
-        setAlert({ type: "danger", message: "❌ Error al añadir juego." });
+        setAlert({ type: "danger", message: "❌ Error adding game." });
       }
     } catch (err) {
-      console.error("Error RAWG detail:", err);
-      setAlert({ type: "danger", message: "❌ Error al obtener detalles del juego." });
+      console.error("RAWG detail error:", err);
+      setAlert({ type: "danger", message: "❌ Error fetching game details." });
     }
   };
 
@@ -212,7 +238,7 @@ export const LocalGamesList = () => {
   };
 
   const handleCheckboxChange = (e) => {
-    const { name, value, checked } = e.target; // "platforms" o "genres"
+    const { name, value, checked } = e.target;
     setManualGame((prev) => {
       const prevArr = Array.isArray(prev[name]) ? prev[name] : [];
       if (checked) {
@@ -227,7 +253,7 @@ export const LocalGamesList = () => {
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     if (!manualGame.name.trim()) {
-      setAlert({ type: "danger", message: "❌ El nombre del juego es obligatorio." });
+      setAlert({ type: "danger", message: "❌ Game name is required." });
       return;
     }
     const payload = {
@@ -247,7 +273,7 @@ export const LocalGamesList = () => {
       });
       if (res.ok) {
         await res.json();
-        setAlert({ type: "success", message: "✅ Juego creado manualmente." });
+        setAlert({ type: "success", message: "✅ Game created." });
         setManualGame({
           name: "",
           description: "",
@@ -261,12 +287,12 @@ export const LocalGamesList = () => {
         fetchLocalGames();
       } else {
         const errorData = await res.json();
-        console.error("❌ Error backend:", errorData);
-        setAlert({ type: "danger", message: "❌ Error al crear juego manual." });
+        console.error("❌ Backend error:", errorData);
+        setAlert({ type: "danger", message: "❌ Error creating game." });
       }
     } catch (err) {
-      console.error("❌ Error conexión:", err);
-      setAlert({ type: "danger", message: "❌ Error en la conexión." });
+      console.error("❌ Connection error:", err);
+      setAlert({ type: "danger", message: "❌ Connection error." });
     }
   };
 
@@ -275,9 +301,9 @@ export const LocalGamesList = () => {
       <div className="container mt-4">
         <div className="text-center">
           <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Cargando...</span>
+            <span className="visually-hidden">Loading…</span>
           </div>
-          <p className="mt-2">Cargando juegos de la base de datos...</p>
+          <p className="mt-2">Loading games from the database…</p>
         </div>
       </div>
     );
@@ -289,8 +315,8 @@ export const LocalGamesList = () => {
         <div className="alert alert-danger" role="alert">
           <h4>Error</h4>
           <p>{error}</p>
-          <button className="btn btn-primary" onClick={fetchLocalGames}>
-            Intentar de nuevo
+          <button className="btn btn-gradient" onClick={fetchLocalGames}>
+            Try again
           </button>
         </div>
       </div>
@@ -298,18 +324,21 @@ export const LocalGamesList = () => {
   }
 
   return (
-    <div className="container mt-4">
-
-      <AlertMessage message={alert?.message} type={alert?.type} onClose={() => setAlert(null)} />
+    <div className="container mt-4 local-games-page games-modern">
+      <AlertMessage
+        message={alert?.message}
+        type={alert?.type}
+        onClose={() => setAlert(null)}
+      />
 
       {isAuthenticated && user?.role === "user" && (
         <div className="bg-white p-3 rounded shadow-sm mb-4">
-          <h5 className="mb-3">Busca o añade un juego</h5>
+          <h5 className="mb-3">Search or add a game</h5>
 
           <input
             type="text"
             className="form-control mb-3"
-            placeholder="Buscar juegos en RAWG..."
+            placeholder="Search on RAWG…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -324,7 +353,7 @@ export const LocalGamesList = () => {
             <div className="row">
               {searchResults.map((g) => (
                 <div key={g.id} className="col-12 col-md-4 col-lg-4 mb-3">
-                  <div className="card h-100">
+                  <div className="card glass-card h-100">
                     {g.background_image ? (
                       <img
                         src={g.background_image}
@@ -343,13 +372,13 @@ export const LocalGamesList = () => {
                     <div className="card-body d-flex flex-column">
                       <h6 className="card-title">{g.name}</h6>
                       <p className="text-muted small mb-2">
-                        {g.released || "Fecha no disponible"}
+                        {g.released || "No date"}
                       </p>
                       <button
-                        className="btn btn-success mt-auto"
+                        className="btn btn-gradient mt-auto"
                         onClick={() => handleAddFromRawg(g)}
                       >
-                        Añadir
+                        Add
                       </button>
                     </div>
                   </div>
@@ -360,17 +389,17 @@ export const LocalGamesList = () => {
 
           {!showManualForm ? (
             <button
-              className="btn btn-outline-primary"
+              className="btn btn-gradient"
               onClick={() => setShowManualForm(true)}
             >
-              Crear juego manualmente
+              Add game manually
             </button>
           ) : (
             <form onSubmit={handleManualSubmit} className="bg-light p-3 rounded mt-3">
-              <h6>Crear juego manual</h6>
+              <h6>Create game manually</h6>
 
               <div className="mb-2">
-                <label className="form-label">Nombre *</label>
+                <label className="form-label">Name *</label>
                 <input
                   type="text"
                   name="name"
@@ -382,7 +411,7 @@ export const LocalGamesList = () => {
               </div>
 
               <div className="mb-2">
-                <label className="form-label">Descripción</label>
+                <label className="form-label">Description</label>
                 <textarea
                   name="description"
                   className="form-control"
@@ -392,7 +421,7 @@ export const LocalGamesList = () => {
               </div>
 
               <div className="mb-2">
-                <label className="form-label">Fecha de lanzamiento</label>
+                <label className="form-label">Release date</label>
                 <input
                   type="date"
                   name="released"
@@ -403,7 +432,7 @@ export const LocalGamesList = () => {
               </div>
 
               <div className="mb-2">
-                <label className="form-label">Imagen de fondo (URL)</label>
+                <label className="form-label">Background image (URL)</label>
                 <input
                   type="text"
                   name="background_image"
@@ -414,7 +443,7 @@ export const LocalGamesList = () => {
               </div>
 
               <div className="mb-2">
-                <label className="form-label">Puntuación (hasta 5)</label>
+                <label className="form-label">Rating (max 5)</label>
                 <input
                   type="number"
                   step="0.1"
@@ -426,7 +455,7 @@ export const LocalGamesList = () => {
               </div>
 
               <div className="mb-2">
-                <label className="form-label d-block">Plataformas</label>
+                <label className="form-label d-block">Platforms</label>
                 <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
                   {allPlatforms.map((p) => (
                     <div key={p.id} className="col">
@@ -450,7 +479,7 @@ export const LocalGamesList = () => {
               </div>
 
               <div className="mb-3">
-                <label className="form-label d-block">Géneros</label>
+                <label className="form-label d-block">Genres</label>
                 <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
                   {allGenres.map((g) => (
                     <div key={g.id} className="col">
@@ -473,8 +502,8 @@ export const LocalGamesList = () => {
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-success me-2">Crear juego</button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowManualForm(false)}>Cancelar</button>
+              <button type="submit" className="btn btn-gradient me-2">Create</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowManualForm(false)}>Cancel</button>
             </form>
           )}
         </div>
@@ -482,19 +511,17 @@ export const LocalGamesList = () => {
 
       <div className="row">
         <div className="col-12">
-          <h1 className="mb-4">
-            <i className="fas fa-database"></i> Todos los juegos
-          </h1>
+          <h1 className="mb-4">All games</h1>
 
           {games.length === 0 ? (
             <div className="alert alert-info">
-              <h5>No hay juegos en la base de datos</h5>
-              <p>Aún no se han añadido juegos a la base de datos.</p>
+              <h5>No games found</h5>
+              <p>There are no games in the database yet.</p>
             </div>
           ) : (
             <>
               <p className="text-muted mb-4">
-                {games.length} juegos en la base de datos
+                {games.length} games in the database
               </p>
               <div className="row">
                 {games.map((game) => (
@@ -513,3 +540,6 @@ export const LocalGamesList = () => {
     </div>
   );
 };
+
+
+
