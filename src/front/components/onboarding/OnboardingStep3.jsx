@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/front/pages/OnboardingStep3.jsx
+import React, { useEffect, useMemo, useState } from "react";
 
 const OnboardingStep3 = ({
   selectedFavorites,
@@ -8,241 +9,290 @@ const OnboardingStep3 = ({
 }) => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
   const REQUIRED_FAVORITES = 3;
-  const rawgApiKey = import.meta.env.VITE_RAWG_API_KEY;
+  const rawgKey = useMemo(() => import.meta.env.VITE_RAWG_API_KEY, []);
+  const backend = useMemo(() => import.meta.env.VITE_BACKEND_URL, []);
 
-  // Cargar juegos de muestra para el onboarding
+  // Sample games for onboarding
   useEffect(() => {
-    loadGames();
-  }, []);
+    const load = async () => {
+      try {
+        const res = await fetch(`${backend}/api/onboarding/games-sample?limit=12`);
+        const data = await res.json();
+        setGames(data || []);
+      } catch (e) {
+        console.error("Error loading games:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [backend]);
 
-  // Buscador de juegos en RAWG
+  // RAWG search
   useEffect(() => {
-    const searchRawgGames = async () => {
-      if (searchTerm.length < 3) {
+    const doSearch = async () => {
+      if (searchTerm.trim().length < 3) {
         setSearchResults([]);
         return;
       }
-
       setSearchLoading(true);
       try {
-        const response = await fetch(
-          `https://api.rawg.io/api/games?search=${searchTerm}&key=${rawgApiKey}`
+        const res = await fetch(
+          `https://api.rawg.io/api/games?search=${encodeURIComponent(
+            searchTerm
+          )}&key=${rawgKey}`
         );
-        const data = await response.json();
-        setSearchResults(data.results || []);
-      } catch (error) {
-        console.error("Error searching games:", error);
+        const data = await res.json();
+        setSearchResults(data?.results || []);
+      } catch (e) {
+        console.error("Error searching games:", e);
         setSearchResults([]);
       } finally {
         setSearchLoading(false);
       }
     };
+    const t = setTimeout(doSearch, 500);
+    return () => clearTimeout(t);
+  }, [searchTerm, rawgKey]);
 
-    const delaySearch = setTimeout(searchRawgGames, 500);
-    return () => clearTimeout(delaySearch);
-  }, [searchTerm, rawgApiKey]);
+  const getGamesToShow = () =>
+    searchTerm.trim().length >= 3 ? searchResults : games;
 
-  const loadGames = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/onboarding/games-sample?limit=12`
-      );
-      const data = await response.json();
-      setGames(data);
-    } catch (error) {
-      console.error("Error loading games:", error);
-    } finally {
-      setLoading(false);
+  const toggleGame = (id) => {
+    if (selectedFavorites.includes(id)) {
+      setSelectedFavorites(selectedFavorites.filter((x) => x !== id));
+    } else if (selectedFavorites.length < REQUIRED_FAVORITES) {
+      setSelectedFavorites([...selectedFavorites, id]);
     }
   };
 
-  const handleGameToggle = (gameId) => {
-    if (selectedFavorites.includes(gameId)) {
-      setSelectedFavorites(selectedFavorites.filter((id) => id !== gameId));
-    } else {
-      if (selectedFavorites.length < REQUIRED_FAVORITES) {
-        setSelectedFavorites([...selectedFavorites, gameId]);
-      }
-    }
-  };
-
-  // Función para determinar qué juegos mostrar
-  const getGamesToShow = () => {
-    return searchTerm.length >= 3 ? searchResults : games;
-  };
+  const remaining = REQUIRED_FAVORITES - selectedFavorites.length;
 
   const handleNext = () => {
     if (selectedFavorites.length !== REQUIRED_FAVORITES) {
-      alert(
-        `Por favor selecciona exactamente ${REQUIRED_FAVORITES} juegos favoritos`
-      );
+      alert(`Please select exactly ${REQUIRED_FAVORITES} favorite games.`);
       return;
     }
     onNext();
   };
 
-  const getRemainingSelections = () => {
-    return REQUIRED_FAVORITES - selectedFavorites.length;
-  };
-
   if (loading) {
     return (
       <div className="text-center py-5">
-        <i className="fas fa-spinner fa-spin fa-3x mb-3 text-primary"></i>
-        <p>Cargando juegos...</p>
+        <div className="spinner-border text-primary" role="status" />
+        <p className="mt-2">Loading games…</p>
       </div>
     );
   }
 
+  const reachedLimit = selectedFavorites.length >= REQUIRED_FAVORITES;
+
   return (
     <div className="row justify-content-center">
-      <div className="col-lg-12">
-        <div className="card shadow-sm border-0">
-          <div className="card-body p-5">
-            {/* Título */}
-            <div className="text-center mb-4">
-              <div className="mb-3">
-                <i className="fas fa-star fa-3x text-warning"></i>
-              </div>
-              <h3 className="card-title">¡Selecciona tus juegos favoritos!</h3>
-              <p className="text-muted">
-                Elige exactamente {REQUIRED_FAVORITES} juegos que te gusten.
-                Esto nos ayudará a entender mejor tus preferencias.
-              </p>
+      <div className="col-xl-10 col-lg-11">
+        <div className="glass-card p-4 p-md-5">
+          {/* Header */}
+          <div className="text-center mb-4">
+            <div
+              className="mx-auto mb-3 d-inline-flex align-items-center justify-content-center"
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 14,
+                background:
+                  "linear-gradient(50deg, rgba(110,0,255,.12), rgba(187,0,255,.12))",
+                border: "1px solid rgba(110,0,255,.18)",
+              }}
+            >
+              <i className="fas fa-star" style={{ color: "#6E00FF" }} />
             </div>
+            <h3 className="mb-2" style={{ fontWeight: 800, letterSpacing: "-.02em" }}>
+              Pick your favorite games
+            </h3>
+            <p className="text-muted mb-0">
+              Choose exactly {REQUIRED_FAVORITES} games you love.  
+              This helps us understand your taste.
+            </p>
+          </div>
 
-            {/* Contador de selecciones */}
-            <div className="text-center mb-4">
-              <div className="d-inline-block">
-                <span className="badge bg-primary fs-6 px-3 py-2">
-                  {selectedFavorites.length} de {REQUIRED_FAVORITES}{" "}
-                  seleccionados
-                </span>
-                {getRemainingSelections() > 0 && (
-                  <small className="d-block text-muted mt-2">
-                    Faltan {getRemainingSelections()} juego
-                    {getRemainingSelections() !== 1 ? "s" : ""}
-                  </small>
-                )}
-                {getRemainingSelections() === 0 && (
-                  <small className="d-block text-success mt-2">
-                    <i className="fas fa-check me-1"></i>
-                    ¡Perfecto! Ya tienes {REQUIRED_FAVORITES} juegos
-                    seleccionados
-                  </small>
-                )}
-              </div>
+          {/* Selection counter */}
+          <div className="text-center mb-4">
+            <div className="d-inline-flex align-items-center gap-2">
+              <span
+                className="chip alt"
+                style={{ fontSize: "0.95rem", fontWeight: 700 }}
+              >
+                {selectedFavorites.length} / {REQUIRED_FAVORITES} selected
+              </span>
             </div>
+            {remaining > 0 && (
+              <div className="small text-muted mt-2">
+                {remaining} selection{remaining !== 1 ? "s" : ""} left
+              </div>
+            )}
+            {remaining === 0 && (
+              <div className="small" style={{ color: "#2fb344", fontWeight: 600 }}>
+                <i className="fa-solid fa-check me-1" />
+                Perfect! You’ve selected {REQUIRED_FAVORITES}.
+              </div>
+            )}
+          </div>
 
-            {/* Buscador de juegos */}
-            <div className="mb-4">
+          {/* Search */}
+          <div className="mb-4">
+            <div className="input-group input-group-merge">
+              <span className="input-group-text">
+                <i className="fa-solid fa-magnifying-glass" />
+              </span>
               <input
                 type="text"
                 className="form-control"
-                placeholder="Buscar juegos adicionales..."
+                placeholder="Search more games…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               {searchLoading && (
-                <div className="text-center mt-2">
-                  <small className="text-muted">
-                    <i className="fas fa-spinner fa-spin me-1"></i>
-                    Buscando...
-                  </small>
-                </div>
+                <span className="input-group-text">
+                  <i className="fa-solid fa-spinner fa-spin" />
+                </span>
               )}
             </div>
+            <small className="text-muted d-block mt-2">
+              Type at least 3 characters to search in RAWG.
+            </small>
+          </div>
 
-            {/* Grid de juegos */}
-            <div className="row g-3 mb-4">
-              {getGamesToShow().map((game) => (
-                <div key={game.id} className="col-md-6 col-lg-4 col-xl-3">
-                  <div
-                    className={`card h-100 border-2 cursor-pointer game-card ${
-                      selectedFavorites.includes(game.id)
-                        ? "border-warning bg-warning text-dark"
-                        : "border-light"
-                    } ${
-                      selectedFavorites.length >= REQUIRED_FAVORITES &&
-                      !selectedFavorites.includes(game.id)
-                        ? "opacity-50"
-                        : ""
-                    }`}
-                    onClick={() => handleGameToggle(game.id)}
-                    style={{
-                      cursor:
-                        selectedFavorites.length >= REQUIRED_FAVORITES &&
-                        !selectedFavorites.includes(game.id)
-                          ? "not-allowed"
-                          : "pointer",
-                      transition: "all 0.3s ease",
-                    }}
+          {/* Games grid */}
+          <div className="row g-3 g-md-4 mb-4">
+            {getGamesToShow().map((g) => {
+              const id = g.id ?? g.rawg_id;
+              const isSelected = selectedFavorites.includes(id);
+              const disabled = reachedLimit && !isSelected;
+
+              return (
+                <div key={id} className="col-12 col-sm-6 col-lg-4 col-xl-3">
+                  <button
+                    type="button"
+                    onClick={() => (!disabled ? toggleGame(id) : null)}
+                    className="w-100 text-start p-0 bg-transparent border-0"
+                    style={{ cursor: disabled ? "not-allowed" : "pointer" }}
+                    aria-pressed={isSelected}
+                    disabled={disabled}
                   >
-                    <div className="card-body p-3">
-                      {/* Imagen del juego */}
-                      {game.background_image && (
-                        <div className="mb-2">
+                    <div
+                      className="h-100"
+                      style={{
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        border: isSelected
+                          ? "2px solid #6E00FF"
+                          : "1px solid rgba(15,23,42,.08)",
+                        boxShadow: isSelected
+                          ? "0 16px 36px rgba(110,0,255,.22)"
+                          : "0 10px 28px rgba(17,24,39,.08)",
+                        background: "#fff",
+                        opacity: disabled ? 0.6 : 1,
+                        transition: "all .18s ease",
+                      }}
+                    >
+                      {/* Cover */}
+                      <div
+                        className="position-relative"
+                        style={{ height: 170, background: "#f5f6f9" }}
+                      >
+                        {g.background_image ? (
                           <img
-                            src={game.background_image}
-                            alt={game.name}
-                            className="img-fluid rounded"
+                            src={g.background_image}
+                            alt={g.name}
                             style={{
                               width: "100%",
-                              height: "120px",
+                              height: "100%",
                               objectFit: "cover",
+                              display: "block",
                             }}
                           />
-                        </div>
-                      )}
+                        ) : (
+                          <div className="h-100 d-flex align-items-center justify-content-center text-muted">
+                            <i className="fa-solid fa-image fa-lg" />
+                          </div>
+                        )}
 
-                      {/* Información del juego */}
-                      <h6 className="card-title mb-2 small fw-bold">
-                        {game.name}
-                      </h6>
+                        {isSelected && (
+                          <span
+                            className="position-absolute top-0 end-0 m-2"
+                            style={{
+                              background: "#6E00FF",
+                              color: "#fff",
+                              borderRadius: 999,
+                              padding: ".35rem .6rem",
+                              fontWeight: 700,
+                              fontSize: 12,
+                              boxShadow: "0 6px 18px rgba(110,0,255,.36)",
+                            }}
+                          >
+                            <i className="fa-solid fa-heart me-1" />
+                            Favorite
+                          </span>
+                        )}
+                      </div>
 
-                      {game.rating && (
-                        <div className="mb-2">
-                          <small className="text-muted">
-                            <i className="fas fa-star text-warning me-1"></i>
-                            {game.rating}
-                          </small>
-                        </div>
-                      )}
+                      {/* Body */}
+                      <div className="p-3">
+                        <h6
+                          className="mb-2"
+                          style={{
+                            fontWeight: 800,
+                            letterSpacing: "-.01em",
+                            lineHeight: 1.2,
+                          }}
+                          title={g.name}
+                        >
+                          {g.name}
+                        </h6>
 
-                      {selectedFavorites.includes(game.id) && (
-                        <div className="text-center">
-                          <i className="fas fa-heart fa-2x text-danger"></i>
+                        <div className="d-flex align-items-center gap-2">
+                          {g.rating ? (
+                            <span className="rating-chip">
+                              <i className="fa-solid fa-star" />
+                              {Number(g.rating).toFixed(1)}
+                            </span>
+                          ) : null}
+
+                          {g.released ? (
+                            <span className="chip soft">
+                              <i className="fa-solid fa-calendar me-1" />
+                              {g.released?.slice(0, 4)}
+                            </span>
+                          ) : null}
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  </button>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            {/* Botones de navegación */}
-            <div className="d-flex justify-content-between">
-              <button
-                className="btn btn-outline-secondary btn-lg px-4"
-                onClick={onPrev}
-              >
-                <i className="fas fa-arrow-left me-2"></i>
-                Anterior
-              </button>
-              <button
-                className="btn btn-primary btn-lg px-4"
-                onClick={handleNext}
-                disabled={selectedFavorites.length !== REQUIRED_FAVORITES}
-              >
-                Siguiente
-                <i className="fas fa-arrow-right ms-2"></i>
-              </button>
-            </div>
+          {/* Actions */}
+          <div className="d-flex justify-content-between">
+            <button className="btn btn-pill-outline btn-lg" onClick={onPrev}>
+              <i className="fas fa-arrow-left me-2" />
+              Back
+            </button>
+            <button
+              className="btn btn-gradient btn-lg"
+              onClick={handleNext}
+              disabled={selectedFavorites.length !== REQUIRED_FAVORITES}
+            >
+              Finish
+              <i className="fas fa-arrow-right ms-2" />
+            </button>
           </div>
         </div>
       </div>
@@ -251,3 +301,4 @@ const OnboardingStep3 = ({
 };
 
 export default OnboardingStep3;
+
